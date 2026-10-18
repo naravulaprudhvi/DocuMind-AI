@@ -32,15 +32,28 @@ git push -u origin main
 
 ## 2. Cloud Deployment Options
 
-### Option A: Render / Railway / Heroku
-This folder includes both `Procfile` and `runtime.txt`.
-1. Link your GitHub repository in the cloud provider's dashboard.
-2. Select **Python** runtime or Docker.
-3. Configure your Environment Variables in the provider's dashboard:
-   - `SECRET_KEY`: A strong random string (e.g., generate with `python -c "import secrets; print(secrets.token_hex(32))"`)
-   - `DATABASE_URL`: Your production MySQL or PostgreSQL connection string
+### Option A: Render (Web Service)
+1. In the Render Dashboard, click **New +** -> **Web Service** and connect your GitHub repository.
+2. Configure Service Settings:
+   - **Environment**: `Python 3`
+   - **Region**: Closest to you (e.g., Singapore, Frankfurt, Oregon)
+   - **Branch**: `main`
+   - **Root Directory**: Leave blank (or `deploy` if deploying from a monorepo)
+   - **Build Command**:
+     ```bash
+     pip install --upgrade pip && pip install -r requirements.txt
+     ```
+   - **Start Command**:
+     ```bash
+     python wsgi.py
+     ```
+3. In **Environment Variables**, add:
+   - `PYTHON_VERSION`: `3.11.9` *(Crucial: ensures pre-built binary wheels for PyTorch and FAISS)*
+   - `SECRET_KEY`: A strong random 32-character string
+   - `DATABASE_URL`: Your production MySQL/PostgreSQL connection URI (e.g., `mysql+pymysql://user:pass@host:port/db`)
    - `GEMINI_API_KEY`: Your Google Gemini API key
-   - `PORT`: Set automatically by the hosting provider (defaults to 5000)
+   - `USE_TORCH`: `1`
+   - `TF_ENABLE_ONEDNN_OPTS`: `0`
 
 ### Option B: Docker Container Deployment
 Run DocuMind AI anywhere with Docker:
