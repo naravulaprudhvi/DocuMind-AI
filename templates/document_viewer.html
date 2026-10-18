@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block content %}
+<!-- Viewer Header / Actions Bar -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-3 border-bottom">
+  <div class="d-flex align-items-center gap-2">
+    <a href="{{ url_for('documents.library') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
+      <i class="bi bi-arrow-left"></i> Back to Knowledge Base
+    </a>
+    <a href="{{ url_for('chat.chat') }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">
+      <i class="bi bi-chat-dots"></i> Back to Chats
+    </a>
+  </div>
+    <div>
+      <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+        {% if doc.filename.lower().endswith(('.docx', '.doc')) %}
+          <i class="bi bi-file-earmark-word text-primary fs-5"></i>
+        {% elif doc.filename.lower().endswith('.pdf') %}
+          <i class="bi bi-file-earmark-pdf text-danger fs-5"></i>
+        {% else %}
+          <i class="bi bi-file-earmark-text text-secondary fs-5"></i>
+        {% endif %}
+        <span>{{ doc.filename }}</span>
+      </h5>
+      <small class="text-muted">
+        Document ID: #{{ doc.document_id }} &bull;
+        {% if is_word %}
+          <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">Word Document (.docx)</span>
+        {% else %}
+          <span class="badge bg-secondary-subtle text-secondary border rounded-pill">Text Document</span>
+        {% endif %}
+        &bull; Uploaded {{ doc.uploaded_at.strftime('%B %d, %Y at %I:%M %p') }}
+      </small>
+    </div>
+  </div>
+
+  <div class="d-flex align-items-center gap-2 mt-3 mt-md-0">
+    <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" onclick="window.print()" title="Print document">
+      <i class="bi bi-printer"></i> Print
+    </button>
+    <a href="{{ url_for('documents.view_document', doc_id=doc.document_id, raw=1, download=1) }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1" title="Download original binary file">
+      <i class="bi bi-download"></i> Download File
+    </a>
+    <a href="{{ url_for('summaries.view_summary', doc_id=doc.document_id) }}" class="btn btn-outline-info btn-sm d-inline-flex align-items-center gap-1" title="View Executive Summary">
+      <i class="bi bi-file-text"></i> Summary
+    </a>
+    <a href="{{ url_for('chat.chat') }}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1" title="Ask AI about this document">
+      <i class="bi bi-chat-dots"></i> Query in Chat
+    </a>
+  </div>
+</div>
+
+<!-- Reading Canvas / Paper View -->
+<div class="document-viewer-container py-3">
+  <div class="card shadow-sm border-0 document-paper mx-auto p-4 p-md-5">
+    <div class="document-content lh-lg">
+      {{ content_html|safe }}
+    </div>
+  </div>
+</div>
+
+<style>
+  .document-paper {
+    max-width: 900px;
+    min-height: 850px;
+    border-radius: 12px !important;
+    border: 1px solid var(--card-border) !important;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08) !important;
+    background-color: var(--card-bg) !important;
+  }
+
+  .document-content {
+    color: var(--text-main);
+    font-size: 1rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  .document-content h1, 
+  .document-content h2, 
+  .document-content h3, 
+  .document-content h4 {
+    color: var(--text-main);
+    font-weight: 700;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .document-content p {
+    margin-bottom: 1rem;
+    line-height: 1.75;
+  }
+
+  .document-content strong {
+    font-weight: 700;
+    color: var(--text-main);
+  }
+
+  .document-content em {
+    font-style: italic;
+    color: var(--text-secondary);
+  }
+
+  .document-content ul, 
+  .document-content ol {
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+  }
+
+  .document-content li {
+    margin-bottom: 0.35rem;
+    line-height: 1.65;
+  }
+
+  .document-content table {
+    width: 100%;
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+
+  .document-content table th, 
+  .document-content table td {
+    border: 1px solid var(--card-border);
+    padding: 0.65rem 0.85rem;
+    vertical-align: top;
+  }
+
+  .document-content table th {
+    background-color: rgba(255, 255, 255, 0.04);
+    font-weight: 600;
+  }
+
+  @media print {
+    nav, .navbar, .btn, .d-flex.border-bottom {
+      display: none !important;
+    }
+    .document-paper {
+      box-shadow: none !important;
+      border: none !important;
+      padding: 0 !important;
+      max-width: 100% !important;
+      background-color: #ffffff !important;
+      color: #000000 !important;
+    }
+  }
+</style>
+{% endblock %}

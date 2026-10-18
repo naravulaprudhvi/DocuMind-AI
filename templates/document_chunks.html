@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+  <div>
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <a href="{{ url_for('documents.library') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
+        <i class="bi bi-arrow-left"></i> Back to Knowledge Base
+      </a>
+      <a href="{{ url_for('chat.chat') }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">
+        <i class="bi bi-chat-dots"></i> Back to Chat
+      </a>
+    </div>
+    <h4 class="fw-bold mb-1">{{ doc.filename }}</h4>
+    <small class="text-muted">Document ID: #{{ doc.document_id }} &bull; Status: <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill">{{ doc.status }}</span></small>
+  </div>
+  <div class="d-flex gap-2 mt-2 mt-md-0">
+    <a href="{{ url_for('documents.view_document', doc_id=doc.document_id) }}" target="_blank" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
+      <i class="bi bi-eye"></i> View Original
+    </a>
+    <form method="post" action="{{ url_for('documents.process', doc_id=doc.document_id) }}">
+      <button class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">
+        <i class="bi bi-arrow-repeat"></i> Re-Index Vectors
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card p-3 shadow-sm border-0 bg-white">
+      <div class="text-muted small fw-medium mb-1">Total Chunks</div>
+      <div class="h4 mb-0 fw-bold text-primary">{{ chunks|length }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3 shadow-sm border-0 bg-white">
+      <div class="text-muted small fw-medium mb-1">Uploaded Date</div>
+      <div class="h6 mb-0 fw-bold">{{ doc.uploaded_at.strftime('%d %b %Y, %H:%M') }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3 shadow-sm border-0 bg-white">
+      <div class="text-muted small fw-medium mb-1">FAISS Vector Index</div>
+      <div class="h6 mb-0">
+        {% if indexed %}
+          <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill">Active & Searchable</span>
+        {% else %}
+          <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 rounded-pill">Index Missing</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Document Content Semantic Search -->
+<div class="card shadow-sm border-0 p-4 mb-4">
+  <h6 class="fw-bold mb-1 d-flex align-items-center gap-2">
+    <i class="bi bi-search text-primary"></i> Search Document Content
+  </h6>
+  <p class="text-muted small mb-3">Search passages, concepts, and key topics across this document using semantic vector search.</p>
+  
+  <form method="get" class="d-flex flex-column flex-sm-row gap-2">
+    <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Ask a question or search keywords (e.g. 'skills', 'education', 'experience')..." required>
+    <button type="submit" class="btn btn-primary px-4 d-inline-flex align-items-center justify-content-center gap-2">
+      <i class="bi bi-search"></i>
+      <span>Search Vectors</span>
+    </button>
+    {% if query %}
+      <a href="{{ url_for('documents.view_chunks', doc_id=doc.document_id) }}" class="btn btn-outline-secondary">Clear</a>
+    {% endif %}
+  </form>
+
+  {% if query %}
+    <div class="mt-4 pt-3 border-top">
+      <h6 class="fw-bold mb-3">Top Matching Results for: <span class="text-primary">"{{ query }}"</span></h6>
+      {% if search_results %}
+        <div class="vstack gap-3">
+          {% for res in search_results %}
+            <div class="card border-primary border-opacity-25 bg-light p-3 rounded-3 shadow-sm">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="badge bg-primary rounded-pill">Rank #{{ loop.index }}</span>
+                  <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill">Page {{ res.chunk.page_number }}</span>
+                  <span class="badge bg-secondary-subtle text-secondary rounded-pill">Chunk ID: {{ res.chunk.chunk_id }}</span>
+                </div>
+                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Similarity: {{ res.score }}</span>
+              </div>
+              <pre class="mb-0 text-wrap font-monospace chunk-pre-box p-3 rounded" style="white-space: pre-wrap; font-size: 0.88rem;">{{ res.chunk.chunk_text }}</pre>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="alert alert-info mt-3 mb-0">No matching chunks returned for this query.</div>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+
+<!-- All Document Chunks -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h6 class="fw-bold mb-0">All Extracted Chunks ({{ chunks|length }})</h6>
+</div>
+
+<div class="vstack gap-3">
+  {% for c in chunks %}
+    <div class="card shadow-sm border-0">
+      <div class="card-header d-flex justify-content-between align-items-center py-2 border-bottom">
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge chunk-badge rounded-pill">Chunk #{{ loop.index }}</span>
+          <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">Page {{ c.page_number }}</span>
+        </div>
+        <small class="text-muted" style="font-size: 0.72rem;">Vector ID: {{ c.vector_id if c.vector_id is not none else 'N/A' }}</small>
+      </div>
+      <div class="card-body">
+        <pre class="mb-0 text-wrap font-monospace chunk-pre-box p-3 rounded" style="white-space: pre-wrap; font-size: 0.88rem; line-height: 1.5;">{{ c.chunk_text }}</pre>
+      </div>
+      <div class="card-footer text-muted small py-1 text-end" style="font-size: 0.72rem;">
+        {{ c.chunk_text|length }} characters
+      </div>
+    </div>
+  {% else %}
+    <div class="card p-4 text-center text-muted">
+      No chunks have been generated yet for this document. Click "Re-Index Vectors" above to generate them.
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,1417 @@
+{% extends "base.html" %}
+{% block body_class %}chat-body-fixed{% endblock %}
+{% block container_class %}container-fluid px-3 px-xl-4 chat-page-wrapper{% endblock %}
+{% block content %}
+
+<!-- Combined Greeting Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-center chat-greeting-bar">
+  <div>
+    <h5 class="fw-bold mb-0">Welcome, {{ g.user.name }} 👋</h5>
+    <p class="text-muted small mb-0 d-none d-sm-block">Ask questions, search through your documents, and manage chat history</p>
+  </div>
+</div>
+
+<div class="row g-3 chat-main-row">
+  <!-- Left Sidebar: New Chat + Chat History + Previous Documents -->
+  <div class="col-lg-3 col-md-4 d-flex flex-column chat-sidebar-col">
+    <!-- New Chat Button -->
+    <a href="{{ url_for('chat.chat') }}" class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2 py-2 mb-2 flex-shrink-0">
+      <i class="bi bi-plus-lg"></i> New Chat
+    </a>
+
+    <!-- 1. Recent Chats (Chat History) -->
+    <div class="card shadow-sm border-0 p-3 mb-2 chat-sidebar-card-chats">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="fw-bold small text-muted text-uppercase d-flex align-items-center gap-1">
+          <i class="bi bi-clock-history text-primary"></i> Recent Chats
+        </span>
+      </div>
+      <div class="small text-muted mb-2 fst-italic" style="font-size: 0.75rem;">
+        Right-click any chat to pin or delete.
+      </div>
+      <div class="list-group list-group-flush" id="chat-history-list">
+        {% if grouped_conversations %}
+          {% for group_title, conv_list in grouped_conversations %}
+            <div class="chat-time-header px-2 pt-2 pb-1 text-muted text-uppercase fw-bold chat-group-{{ group_title|lower|replace(' ', '-') }}" style="font-size: 0.68rem; letter-spacing: 0.5px;">
+              <i class="bi bi-calendar3 me-1"></i> {{ group_title }}
+            </div>
+            {% for c in conv_list %}
+              <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-2 py-2 chat-item-context {% if active_conv and active_conv.conversation_id == c.conversation_id %}active rounded{% endif %}"
+                   id="chat-row-{{ c.conversation_id }}"
+                   data-conv-id="{{ c.conversation_id }}"
+                   data-conv-title="{{ c.title }}">
+                <a href="{{ url_for('chat.chat', c=c.conversation_id) }}" class="text-decoration-none text-truncate flex-grow-1 d-flex flex-column {% if active_conv and active_conv.conversation_id == c.conversation_id %}text-white{% else %}chat-conv-link{% endif %}">
+                  <div class="d-flex align-items-center text-truncate">
+                    <i class="bi bi-chat-left-text me-1 flex-shrink-0"></i>
+                    <span class="conv-title-text text-truncate">{{ c.title }}</span>
+                    <span class="chat-pin-icon d-none ms-1 flex-shrink-0"><i class="bi bi-pin-angle-fill text-warning" title="Pinned to top"></i></span>
+                  </div>
+                  <span class="chat-item-time text-truncate ps-3" style="font-size: 0.68rem; opacity: 0.75;" data-utc="{{ c.created_at.isoformat() if c.created_at else '' }}">
+                    {{ c.created_at.strftime('%I:%M %p') if c.created_at else '' }}
+                  </span>
+                </a>
+                <form method="post" action="{{ url_for('chat.delete_conversation', conv_id=c.conversation_id) }}" class="d-none chat-delete-form" id="delete-chat-form-{{ c.conversation_id }}"></form>
+              </div>
+            {% endfor %}
+          {% endfor %}
+        {% else %}
+          <div class="text-muted small py-3 text-center" id="no-chats-hint">No past conversations.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- 2. UNDER CHAT HISTORY: Previous Documents -->
+    <div class="card shadow-sm border-0 p-3 chat-sidebar-card-docs">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <a href="{{ url_for('documents.library') }}" class="fw-bold small text-muted text-uppercase text-decoration-none hover-primary d-inline-flex align-items-center gap-1" title="Open Document Knowledge Base">
+          <i class="bi bi-folder2-open text-primary"></i>
+          <span>Previous Documents</span>
+          <i class="bi bi-box-arrow-up-right" style="font-size: 0.72rem;"></i>
+        </a>
+        <a href="{{ url_for('documents.library') }}" class="badge bg-primary text-decoration-none rounded-pill" id="account-doc-count" title="Open Document Knowledge Base">{{ docs|length }}</a>
+      </div>
+      <div class="small text-muted mb-2 fst-italic" style="font-size: 0.75rem;">
+        Click <strong>+ Insert</strong> to chat with a document. Click title to open Knowledge Base.
+      </div>
+      <div class="vstack gap-1" id="previous-docs-list">
+        {% for d in docs %}
+          <div class="d-flex justify-content-between align-items-center py-1 px-1 rounded hover-bg doc-item-context"
+               id="prev-doc-row-{{ d.document_id }}"
+               data-doc-id="{{ d.document_id }}"
+               data-doc-name="{{ d.filename }}">
+            <div class="d-flex align-items-center gap-2 small text-truncate" title="{{ d.filename }}">
+              {% if d.filename and (d.filename.lower().endswith('.docx') or d.filename.lower().endswith('.doc')) %}
+                <i class="bi bi-file-earmark-word text-primary"></i>
+              {% elif d.filename and d.filename.lower().endswith('.pdf') %}
+                <i class="bi bi-file-earmark-pdf text-danger"></i>
+              {% else %}
+                <i class="bi bi-file-earmark-text text-secondary"></i>
+              {% endif %}
+              <a href="{{ url_for('documents.view_document', doc_id=d.document_id) }}" target="_blank" class="text-truncate doc-name-text text-decoration-none hover-primary" style="max-width: 105px;" title="View original {{ d.filename }}">
+                {{ d.filename }}
+              </a>
+              <span class="doc-pin-icon d-none"><i class="bi bi-pin-angle-fill text-warning" title="Pinned to top"></i></span>
+            </div>
+            <div class="d-flex align-items-center gap-1">
+              <a href="{{ url_for('documents.view_document', doc_id=d.document_id) }}" target="_blank" class="btn btn-sm btn-link text-muted p-0 px-1" title="View original document">
+                <i class="bi bi-eye"></i>
+              </a>
+              <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill insert-doc-btn" style="font-size: 0.72rem;" onclick="handleToggleDoc(this)">
+                <i class="bi bi-plus"></i> Insert
+              </button>
+              <form method="post" action="{{ url_for('documents.delete', doc_id=d.document_id) }}" class="d-none doc-delete-form" id="delete-doc-form-{{ d.document_id }}">
+                <input type="hidden" name="redirect_to" value="chat">
+              </form>
+            </div>
+          </div>
+        {% else %}
+          <div class="text-muted small py-2 text-center" id="no-docs-hint">
+            No previous documents.<br>
+            <a href="{{ url_for('documents.library') }}" class="text-primary text-decoration-none small">Go to Knowledge Base &rarr;</a>
+          </div>
+        {% endfor %}
+      </div>
+      <div class="mt-auto pt-2 border-top chat-docs-upload-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1" onclick="document.getElementById('chat-file-input').click()">
+          <i class="bi bi-cloud-arrow-up"></i> Upload Document
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Chat Workspace Area -->
+  <div class="col-lg-9 col-md-8 chat-workspace-col">
+    <div class="card shadow-sm border-0 d-flex flex-column position-relative chat-workspace-card" id="chat-drag-container">
+      
+      <!-- Drag & drop overlay indicator -->
+      <div id="chat-drop-overlay" class="position-absolute top-0 start-0 w-100 h-100 d-none flex-column align-items-center justify-content-center bg-white bg-opacity-90" style="z-index: 100;">
+        <i class="bi bi-cloud-arrow-up fs-1 text-primary mb-2"></i>
+        <h5 class="fw-bold mb-1">Drop document to connect to this chat</h5>
+        <p class="text-muted small">Supports PDF and Word (.docx, .doc)</p>
+      </div>
+
+      <!-- Chat Header -->
+      <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+          <div class="chat-header-robot flex-shrink-0">
+            <i class="bi bi-robot fs-5"></i>
+          </div>
+          <div>
+            <h6 class="mb-0 fw-bold">{{ active_conv.title if active_conv else "DocuMind Assistant" }}</h6>
+            <small class="text-muted">
+              {% if active_conv and active_conv.created_at %}
+                <span class="active-conv-created" data-utc="{{ active_conv.created_at.isoformat() }}">Started {{ active_conv.created_at.strftime('%b %d, %Y at %I:%M %p') }}</span>
+              {% else %}
+                Chat Workspace
+              {% endif %}
+            </small>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span id="active-scope-badge" class="badge bg-light text-muted border px-3 py-2">
+            <i class="bi bi-paperclip"></i> <span id="connected-doc-label">No document connected</span>
+          </span>
+          {% if has_gemini %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
+              <i class="bi bi-stars"></i> Gemini Active
+            </span>
+          {% endif %}
+          <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+            <i class="bi bi-lightning-charge-fill"></i> AI Engine Active
+          </span>
+        </div>
+      </div>
+
+      <!-- Messages Stream -->
+      <div id="chat-messages" class="card-body p-4 flex-grow-1 overflow-auto d-flex flex-column gap-3">
+        {% if messages %}
+          {% set prev_date = namespace(val=None) %}
+          {% for m in messages %}
+            {% set msg_date = m.created_at.strftime('%Y-%m-%d') if m.created_at else None %}
+            {% if msg_date and msg_date != prev_date.val %}
+              {% set prev_date.val = msg_date %}
+              <div class="text-center my-2">
+                <span class="badge bg-white text-muted border shadow-sm px-3 py-1 rounded-pill chat-date-divider" style="font-size: 0.74rem;" data-date="{{ msg_date }}">
+                  <i class="bi bi-calendar3 me-1"></i>
+                  {{ m.created_at.strftime('%B %d, %Y') if m.created_at else '' }}
+                </span>
+              </div>
+            {% endif %}
+
+            {% if m.role == 'user' %}
+              <!-- User Message -->
+              <div class="d-flex justify-content-end align-items-start gap-2 mb-2">
+                <div class="card bg-primary text-white p-3 border-0 shadow-sm" style="max-width: 75%; border-radius: 18px 18px 4px 18px;">
+                  <div class="text-wrap font-sans" style="white-space: pre-wrap;">{{ m.content }}</div>
+                  <div class="text-end mt-1 text-white-50 d-flex align-items-center justify-content-end gap-1" style="font-size: 0.70rem;">
+                    <i class="bi bi-clock" style="font-size: 0.65rem;"></i>
+                    <span class="chat-time-tag" data-utc="{{ m.created_at.isoformat() if m.created_at else '' }}">{{ m.created_at.strftime('%I:%M %p') if m.created_at else '' }}</span>
+                  </div>
+                </div>
+                <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 36px; height: 36px; font-size: 0.85rem;">
+                  <i class="bi bi-person-fill"></i>
+                </div>
+              </div>
+            {% else %}
+              <!-- Assistant Message -->
+              <div class="d-flex justify-content-start align-items-start gap-2 mb-2">
+                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 36px; height: 36px; font-size: 0.85rem;">
+                  <i class="bi bi-robot"></i>
+                </div>
+                <div class="card bg-white p-3 border shadow-sm" style="max-width: 85%; border-radius: 18px 18px 18px 4px;">
+                  <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
+                    <span class="fw-semibold small text-primary d-flex align-items-center gap-1">
+                      <i class="bi bi-stars"></i> DocuMind AI
+                    </span>
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="text-muted d-flex align-items-center gap-1" style="font-size: 0.70rem;">
+                        <i class="bi bi-clock"></i>
+                        <span class="chat-time-tag" data-utc="{{ m.created_at.isoformat() if m.created_at else '' }}">{{ m.created_at.strftime('%I:%M %p') if m.created_at else '' }}</span>
+                      </span>
+                      <button type="button" class="btn btn-sm btn-link text-muted p-0 copy-msg-btn" onclick="copyMessageText(this)" title="Copy response">
+                        <i class="bi bi-clipboard" style="font-size: 0.8rem;"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="text-wrap font-sans mb-2 assistant-msg-content" style="line-height: 1.68;" data-raw="{{ m.content }}">{{ m.content }}</div>
+
+                  <!-- Source Citations (if any) -->
+                  {% if m.sources %}
+                    <div class="border-top pt-2 mt-2">
+                      <small class="fw-bold text-muted d-block mb-1">
+                        <i class="bi bi-quote"></i> Grounded Citations ({{ m.sources|length }}):
+                      </small>
+                      <div class="d-flex flex-wrap gap-2">
+                        {% for s in m.sources %}
+                          {% if s.chunk and s.chunk.document %}
+                            <details class="citation-detail">
+                              <summary class="badge source-pill border py-1 px-2 cursor-pointer">
+                                📄 {{ s.chunk.document.filename }} (Page {{ s.chunk.page_number }})
+                                <a href="{{ url_for('documents.view_document', doc_id=s.chunk.document.document_id) }}" target="_blank" class="text-primary ms-1 text-decoration-none" title="Open original document in new tab">
+                                  <i class="bi bi-box-arrow-up-right" style="font-size: 0.72rem;"></i>
+                                </a>
+                                {% if s.relevance_score is not none %}
+                                  <span class="badge bg-primary ms-1">{{ (s.relevance_score * 100)|round|int }}%</span>
+                                {% endif %}
+                              </summary>
+                              <div class="card card-body source-detail-body small mt-1 p-2 border-0">
+                                {{ s.chunk.chunk_text }}
+                              </div>
+                            </details>
+                          {% endif %}
+                        {% endfor %}
+                      </div>
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          <!-- Welcome Prompt Screen -->
+          <div class="m-auto text-center p-3" style="max-width: 520px;" id="in-chat-welcome-box">
+            <div class="chat-welcome-orb" style="width: 54px; height: 54px; margin-bottom: 0.6rem;">
+              <i class="bi bi-stars fs-4"></i>
+            </div>
+            <h5 class="fw-bold mb-1 fs-5">How can DocuMind AI help you today?</h5>
+            <p class="text-muted small mb-3" style="font-size: 0.82rem;">
+              Ask basic questions, get coding and writing help, or attach documents (PDF, Word) for grounded analysis.
+            </p>
+
+            <!-- Quick Starters: Both General Info and Document Analysis -->
+            <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
+              <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 text-nowrap" onclick="setQuickPrompt('What are your capabilities and how can you help me?')">
+                💡 What can you do?
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 text-nowrap" onclick="setQuickPrompt('Explain artificial intelligence in simple words')">
+                🧠 Explain a concept
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 text-nowrap" onclick="setQuickPrompt('Help me write a concise professional email')">
+                ✍️ Writing assistance
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 text-nowrap" onclick="document.getElementById('chat-file-input').click()">
+                <i class="bi bi-paperclip me-1"></i> Attach Document
+              </button>
+            </div>
+
+            {% if docs and docs|length > 0 %}
+              <div class="pt-2 border-top text-start" style="max-height: 100px; overflow-y: auto;">
+                <span class="text-secondary small fw-semibold d-block mb-1" style="font-size: 0.72rem;">
+                  <i class="bi bi-clock-history text-primary me-1"></i> Or quick insert from library:
+                </span>
+                <div class="d-flex flex-wrap gap-1">
+                  {% for d in docs %}
+                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 d-inline-flex align-items-center gap-1 rounded-pill"
+                            data-doc-id="{{ d.document_id }}"
+                            data-doc-name="{{ d.filename }}"
+                            onclick="handleInsertDoc(this)"
+                            style="font-size: 0.72rem; height: 26px;">
+                      <i class="bi bi-file-earmark-text text-primary"></i>
+                      <span class="text-truncate" style="max-width: 120px;">{{ d.filename }}</span>
+                      <i class="bi bi-plus-circle text-success ms-1"></i>
+                    </button>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        <!-- Loading Wave Indicator -->
+        <div id="loading-indicator" class="d-none justify-content-start align-items-start gap-2 mb-2">
+          <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 36px; height: 36px;">
+            <i class="bi bi-robot"></i>
+          </div>
+          <div class="card bg-white p-3 border shadow-sm" style="border-radius: 18px 18px 18px 4px;">
+            <div class="d-flex align-items-center gap-3">
+              <div class="typing-dots">
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+              </div>
+              <span class="text-muted small fw-medium" id="loading-indicator-text">Searching knowledge base and formulating answer...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Input Footer: ChatGPT-Style Floating Capsule Bar -->
+      <div class="card-footer chat-capsule-footer-wrapper">
+        <!-- Live Upload Progress Indicator -->
+        <div id="uploading-file-chip" class="d-none align-items-center gap-2 mb-2 p-1 px-3 bg-light border rounded-pill small" style="width: fit-content; margin: 0 auto;">
+          <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+          <span id="uploading-file-name" class="fw-medium text-body text-truncate" style="max-width: 260px;"></span>
+          <span class="text-muted">Uploading & Indexing...</span>
+        </div>
+
+        <form id="chat-form" method="post" action="{% if active_conv %}{{ url_for('chat.send_message', conv_id=active_conv.conversation_id) }}{% else %}{{ url_for('chat.send_message') }}{% endif %}" class="w-100">
+          <!-- Hidden file input for in-chat upload -->
+          <input type="file" id="chat-file-input" style="display:none;" accept=".pdf,.docx,.doc">
+          
+          <div class="chat-capsule-bar">
+            <!-- + Attach / Upload Button -->
+            <button type="button" class="chat-capsule-btn-attach" onclick="document.getElementById('chat-file-input').click()" title="Attach Document (PDF, Word)">
+              <i class="bi bi-plus-lg"></i>
+            </button>
+
+            <!-- Main Input Field -->
+            <input id="chat-input" type="text" name="question" class="chat-capsule-input" placeholder="Ask DocuMind AI anything, or attach a document..." required autocomplete="off">
+
+            <!-- Think / Deep Reasoning Mode Pill Badge -->
+            <button type="button" class="chat-capsule-think-badge" id="think-mode-btn" title="DocuMind Deep Reasoning Engine Active">
+              <i class="bi bi-cpu text-info"></i>
+              <span>Think</span>
+            </button>
+
+            <!-- Iconic Circular Blue Send Button (Morphs to Stop Button during thinking) -->
+            <button class="chat-capsule-btn-send" type="submit" id="send-btn" title="Send message" aria-label="Send message">
+              <i class="bi bi-send-fill" id="send-btn-icon" style="font-size: 0.95rem; margin-left: 2px;"></i>
+            </button>
+          </div>
+
+          <div class="chat-capsule-subtext d-flex justify-content-between align-items-center px-3 mt-1">
+            <small class="text-muted" style="font-size: 0.7rem; opacity: 0.75;">
+              <i class="bi bi-shield-check text-success me-1"></i> Isolated workspace &bull; Grounded retrieval
+            </small>
+            <small class="text-muted" style="font-size: 0.7rem; opacity: 0.75;">
+              Press <kbd style="font-size: 0.65rem; padding: 1px 4px; background: #e2e8f0; color: #475569; border-radius: 3px;">Enter</kbd> to send
+            </small>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Custom Right-Click Context Menu -->
+<div id="custom-context-menu" class="card shadow border py-1 position-fixed d-none" style="z-index: 9999; min-width: 175px; border-radius: 8px;">
+  <a href="#" target="_blank" class="dropdown-item px-3 py-2 d-none align-items-center gap-2 small text-decoration-none cursor-pointer hover-bg w-100" id="ctx-view-doc-btn">
+    <i class="bi bi-eye text-primary"></i>
+    <span>View Original</span>
+  </a>
+  <button type="button" class="btn btn-link text-start dropdown-item px-3 py-2 d-flex align-items-center gap-2 small text-decoration-none cursor-pointer hover-bg w-100" id="ctx-pin-btn">
+    <i class="bi bi-pin-angle text-primary" id="ctx-pin-icon"></i>
+    <span id="ctx-pin-text">Pin to Top</span>
+  </button>
+  <div class="dropdown-divider my-1 border-top"></div>
+  <button type="button" class="btn btn-link text-start dropdown-item px-3 py-2 d-flex align-items-center gap-2 small text-danger text-decoration-none cursor-pointer hover-bg w-100" id="ctx-delete-btn">
+    <i class="bi bi-trash"></i>
+    <span id="ctx-delete-text">Delete</span>
+  </button>
+</div>
+
+<!-- Chat Configuration Metadata (keeps script tag 100% pure JS without syntax errors) -->
+<div id="chat-metadata"
+     data-conv-id="{{ active_conv.conversation_id if active_conv else '' }}"
+     data-upload-url="{{ url_for('documents.library') }}"
+     data-attached-docs='{{ (attached_docs or []) | tojson | safe }}'
+     class="d-none"></div>
+
+<script>
+  // Utility: HTML Escaping
+  function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  // Quick Prompt Setter for Welcome Suggestions
+  function setQuickPrompt(promptText) {
+    const input = document.getElementById('chat-input');
+    if (input) {
+      input.value = promptText;
+      input.focus();
+    }
+  }
+
+  // Utility: Rich Markdown Renderer (Bold, Italic, Code, Lists, Line Breaks)
+  function renderMarkdown(text) {
+    if (!text) return '';
+
+    // 1. If marked.js is available from CDN, use it with GFM and line breaks
+    if (typeof marked !== 'undefined' && marked.parse) {
+      try {
+        marked.setOptions({
+          breaks: true, // Converts \n inside paragraphs into <br> so finished lines wrap to new lines
+          gfm: true
+        });
+        return marked.parse(text);
+      } catch (e) {
+        console.warn('marked.js parse fallback:', e);
+      }
+    }
+
+    // 2. High-quality built-in Markdown Parser (Fallback)
+    let md = escapeHtml(text);
+
+    // Fenced Code blocks
+    md = md.replace(/```([\s\S]*?)```/g, (match, code) => {
+      return `<pre class="p-3 my-2 bg-light border rounded"><code>${code.trim()}</code></pre>`;
+    });
+
+    // Inline code
+    md = md.replace(/`([^`]+)`/g, '<code class="bg-light px-1 py-0.5 rounded text-primary">$1</code>');
+
+    // Bold & Italic: ***text***
+    md = md.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+
+    // Bold: **text** or __text__
+    md = md.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    md = md.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+
+    // Italic: *text* or _text_
+    md = md.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+    md = md.replace(/\b_([^_]+)_\b/g, '<em>$1</em>');
+
+    // Headers: ###, ##, #
+    md = md.replace(/^### (.*$)/gim, '<h6 class="fw-bold mt-2 mb-1 text-primary">$1</h6>');
+    md = md.replace(/^## (.*$)/gim, '<h5 class="fw-bold mt-2 mb-1 assistant-heading">$1</h5>');
+    md = md.replace(/^# (.*$)/gim, '<h4 class="fw-bold mt-2 mb-1 assistant-heading">$1</h4>');
+
+    // Blockquotes: >
+    md = md.replace(/^>\s?(.*$)/gim, '<blockquote class="border-start border-3 border-primary ps-2 text-muted fst-italic my-2">$1</blockquote>');
+
+    // Bullet points: •, -, * followed by space
+    md = md.replace(/^[\*\-\•]\s+(.*$)/gim, '<div class="d-flex align-items-start gap-2 my-1"><span class="text-primary fw-bold">•</span><span>$1</span></div>');
+
+    // Numbered lists: 1., 2., etc.
+    md = md.replace(/^(\d+)\.\s+(.*$)/gim, '<div class="d-flex align-items-start gap-2 my-1"><span class="fw-bold text-muted">$1.</span><span>$2</span></div>');
+
+    // Double newlines to paragraph break, single newlines to <br> so finished lines write on new lines
+    md = md.replace(/\n\n+/g, '<div class="my-2"></div>');
+    md = md.replace(/\n/g, '<br>');
+
+    return md;
+  }
+
+  // State for active conversation and inserted documents
+  const chatMeta = document.getElementById('chat-metadata');
+  let activeConvId = chatMeta && chatMeta.dataset.convId ? parseInt(chatMeta.dataset.convId, 10) : null;
+  const uploadUrl = chatMeta && chatMeta.dataset.uploadUrl ? chatMeta.dataset.uploadUrl : '/documents';
+  let STORAGE_KEY = activeConvId ? ('documind_chat_inserted_docs_' + activeConvId) : 'documind_chat_draft_docs';
+  let LEGACY_STORAGE_KEY = activeConvId ? ('documind_chat_inserted_doc_' + activeConvId) : null;
+  let attachedDocs = [];
+
+  function loadAttachedDocs() {
+    // 1. Highest priority: Server-rendered attached docs for this conversation
+    if (chatMeta && chatMeta.dataset.attachedDocs) {
+      try {
+        const fromServer = JSON.parse(chatMeta.dataset.attachedDocs);
+        if (Array.isArray(fromServer) && fromServer.length > 0) {
+          attachedDocs = fromServer;
+          if (STORAGE_KEY) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(attachedDocs));
+          }
+          updateAttachedUI();
+          return;
+        }
+      } catch (e) {
+        console.error('Error parsing server attached docs:', e);
+      }
+    }
+
+    // 2. Local storage for this conversation or draft
+    if (!STORAGE_KEY) return;
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        attachedDocs = Array.isArray(parsed) ? parsed : [parsed];
+      } else if (LEGACY_STORAGE_KEY) {
+        const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+        if (legacy) {
+          const parsed = JSON.parse(legacy);
+          attachedDocs = parsed ? (Array.isArray(parsed) ? parsed : [parsed]) : [];
+        }
+      }
+    } catch(e) {
+      console.error(e);
+      attachedDocs = [];
+    }
+    updateAttachedUI();
+  }
+
+  function saveAttachedDocs(docsArr) {
+    attachedDocs = docsArr || [];
+    if (STORAGE_KEY) {
+      if (attachedDocs.length > 0) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(attachedDocs));
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    }
+    updateAttachedUI();
+  }
+
+  function handleToggleDoc(btn) {
+    const row = btn.closest('[data-doc-id]');
+    if (!row) return;
+    const docId = row.getAttribute('data-doc-id');
+    const docName = row.getAttribute('data-doc-name') || '';
+
+    const isAttached = attachedDocs.some(d => String(d.id) === String(docId));
+    if (isAttached) {
+      removeDocumentFromChat(docId);
+    } else {
+      insertDocumentToChat(docId, docName);
+    }
+  }
+
+  const handleInsertDoc = handleToggleDoc;
+
+  function insertDocumentToChat(docId, docName) {
+    if (!docId) return;
+    const exists = attachedDocs.some(d => String(d.id) === String(docId));
+    if (!exists) {
+      attachedDocs.push({ id: docId, name: docName });
+      saveAttachedDocs(attachedDocs);
+    }
+    const welcome = document.getElementById('in-chat-welcome-box');
+    if (welcome) welcome.style.display = 'none';
+    const input = document.getElementById('chat-input');
+    if (input) {
+      input.focus();
+      if (attachedDocs.length === 1) {
+        input.placeholder = `Ask a question about "${docName}"...`;
+      } else {
+        input.placeholder = `Ask across ${attachedDocs.length} connected documents...`;
+      }
+    }
+  }
+
+  function removeDocumentFromChat(docId) {
+    if (docId !== undefined && docId !== null) {
+      attachedDocs = attachedDocs.filter(d => String(d.id) !== String(docId));
+    } else {
+      attachedDocs = [];
+    }
+    saveAttachedDocs(attachedDocs);
+    const input = document.getElementById('chat-input');
+    if (input) {
+      if (attachedDocs.length === 0) {
+        input.placeholder = "Ask DocuMind AI anything, or attach a document...";
+      } else if (attachedDocs.length === 1) {
+        input.placeholder = `Ask a question about "${attachedDocs[0].name}"...`;
+      } else {
+        input.placeholder = `Ask across ${attachedDocs.length} connected documents...`;
+      }
+    }
+  }
+
+  function clearAllDocumentsFromChat() {
+    removeDocumentFromChat(null);
+  }
+
+  function updateAttachedUI() {
+    const container = document.getElementById('inserted-chips-container');
+    const badge = document.getElementById('active-scope-badge');
+    const label = document.getElementById('connected-doc-label');
+
+    // Update active highlight/badge on sidebar document items
+    document.querySelectorAll('#previous-docs-list .doc-item-context').forEach(row => {
+      const id = row.getAttribute('data-doc-id');
+      const isAttached = attachedDocs.some(d => String(d.id) === String(id));
+      const btn = row.querySelector('.insert-doc-btn');
+      if (btn) {
+        if (isAttached) {
+          btn.className = "btn btn-sm btn-outline-danger py-0 px-2 rounded-pill insert-doc-btn";
+          btn.innerHTML = '<i class="bi bi-trash"></i> Delete';
+          btn.title = "Delete from this chat";
+        } else {
+          btn.className = "btn btn-sm btn-outline-primary py-0 px-2 rounded-pill insert-doc-btn";
+          btn.innerHTML = '<i class="bi bi-plus"></i> Insert';
+          btn.title = "Insert into this chat";
+        }
+      }
+    });
+
+    if (attachedDocs && attachedDocs.length > 0) {
+      if (label) {
+        label.textContent = attachedDocs.length === 1 ? attachedDocs[0].name : `${attachedDocs.length} Documents Connected`;
+      }
+      if (badge) {
+        badge.className = "badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2";
+        badge.innerHTML = `
+          <i class="bi bi-paperclip"></i>
+          <span>${attachedDocs.length === 1 ? escapeHtml(attachedDocs[0].name) : attachedDocs.length + ' Documents Connected'}</span>
+          <i class="bi bi-x-circle ms-1 cursor-pointer" onclick="clearAllDocumentsFromChat()" title="Disconnect All"></i>
+        `;
+      }
+      if (container) {
+        let chipsHtml = attachedDocs.map(d => `
+          <span class="badge bg-primary text-white py-1 px-2 d-inline-flex align-items-center gap-1" style="max-width: 220px;">
+            <i class="bi bi-file-earmark-check"></i>
+            <span class="text-truncate" title="${escapeHtml(d.name)}">${escapeHtml(d.name)}</span>
+            <button type="button" class="btn-close btn-close-white" style="font-size: 0.55rem;" onclick="removeDocumentFromChat('${escapeHtml(String(d.id))}')" title="Remove document"></button>
+          </span>
+        `).join('');
+
+        if (attachedDocs.length > 1) {
+          chipsHtml += `
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill" style="font-size: 0.72rem;" onclick="clearAllDocumentsFromChat()">
+              Clear all
+            </button>
+          `;
+        }
+        container.innerHTML = chipsHtml;
+      }
+    } else {
+      if (badge) {
+        badge.className = "badge bg-light text-muted border px-3 py-2";
+        badge.innerHTML = `<i class="bi bi-chat-dots text-primary me-1"></i> <span id="connected-doc-label">General AI Chat</span>`;
+      }
+      if (container) {
+        container.innerHTML = '';
+      }
+    }
+  }
+
+  // Handle in-chat file upload via 📎 button or drag & drop
+  const fileInput = document.getElementById('chat-file-input');
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+      if (fileInput.files && fileInput.files[0]) {
+        uploadFileToChat(fileInput.files[0]);
+      }
+    });
+  }
+
+  async function uploadFileToChat(file) {
+    const chip = document.getElementById('uploading-file-chip');
+    const nameEl = document.getElementById('uploading-file-name');
+    if (chip && nameEl) {
+      nameEl.textContent = file.name;
+      chip.classList.remove('d-none');
+      chip.classList.add('d-flex');
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        insertDocumentToChat(data.document_id, data.filename);
+        // Add to previous documents sidebar if not already present
+        const list = document.getElementById('previous-docs-list');
+        const hint = document.getElementById('no-docs-hint');
+        if (hint) hint.remove();
+        if (list && !document.getElementById(`prev-doc-row-${data.document_id}`)) {
+          const row = document.createElement('div');
+          row.className = 'd-flex justify-content-between align-items-center py-1 px-1 rounded hover-bg doc-item-context';
+          row.id = `prev-doc-row-${data.document_id}`;
+          row.setAttribute('data-doc-id', data.document_id);
+          row.setAttribute('data-doc-name', data.filename);
+          row.innerHTML = `
+            <div class="d-flex align-items-center gap-2 small text-truncate" title="${escapeHtml(data.filename)}">
+              <i class="bi bi-file-earmark-text text-primary"></i>
+              <span class="text-truncate doc-name-text" style="max-width: 120px;">${escapeHtml(data.filename)}</span>
+              <span class="doc-pin-icon d-none"><i class="bi bi-pin-angle-fill text-warning" title="Pinned to top"></i></span>
+            </div>
+            <div class="d-flex align-items-center">
+              <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill insert-doc-btn" style="font-size: 0.72rem;" onclick="handleToggleDoc(this)">
+                <i class="bi bi-plus"></i> Insert
+              </button>
+              <form method="post" action="/documents/${data.document_id}/delete" class="d-none doc-delete-form" id="delete-doc-form-${data.document_id}">
+                <input type="hidden" name="redirect_to" value="chat">
+              </form>
+            </div>
+          `;
+          list.prepend(row);
+          const countBadge = document.getElementById('account-doc-count');
+          if (countBadge) countBadge.textContent = parseInt(countBadge.textContent || '0') + 1;
+        }
+      } else {
+        alert(data.error || 'Failed to upload document.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('An error occurred while uploading.');
+    } finally {
+      if (chip) {
+        chip.classList.add('d-none');
+        chip.classList.remove('d-flex');
+      }
+      if (fileInput) fileInput.value = '';
+    }
+  }
+
+  // Drag & drop support
+  const dragContainer = document.getElementById('chat-drag-container');
+  const dropOverlay = document.getElementById('chat-drop-overlay');
+  if (dragContainer && dropOverlay) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dragContainer.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropOverlay.classList.remove('d-none');
+        dropOverlay.classList.add('d-flex');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dragContainer.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropOverlay.classList.add('d-none');
+        dropOverlay.classList.remove('d-flex');
+      });
+    });
+
+    dragContainer.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      if (files && files.length > 0) {
+        uploadFileToChat(files[0]);
+      }
+    });
+  }
+
+  // ==========================================
+  // Chat Generation Controller & Stop Button (ChatGPT Style)
+  // ==========================================
+  let currentAbortController = null;
+  let isGenerating = false;
+
+  function setGeneratingState(generating) {
+    isGenerating = generating;
+    const sendBtn = document.getElementById('send-btn');
+    const sendIcon = document.getElementById('send-btn-icon');
+    const thinkBadge = document.getElementById('think-mode-btn');
+
+    if (generating) {
+      if (sendBtn) {
+        sendBtn.classList.add('stop-mode');
+        sendBtn.setAttribute('title', 'Stop response (Esc)');
+        sendBtn.setAttribute('aria-label', 'Stop response');
+        sendBtn.disabled = false; // Must remain interactive so user can click to STOP
+      }
+      if (sendIcon) {
+        sendIcon.className = 'bi bi-square-fill';
+        sendIcon.style.fontSize = '0.75rem';
+        sendIcon.style.marginLeft = '0px';
+      }
+      if (thinkBadge) {
+        thinkBadge.classList.add('think-active');
+      }
+    } else {
+      if (sendBtn) {
+        sendBtn.classList.remove('stop-mode');
+        sendBtn.setAttribute('title', 'Send message');
+        sendBtn.setAttribute('aria-label', 'Send message');
+        sendBtn.disabled = false;
+      }
+      if (sendIcon) {
+        sendIcon.className = 'bi bi-send-fill';
+        sendIcon.style.fontSize = '0.95rem';
+        sendIcon.style.marginLeft = '2px';
+      }
+      if (thinkBadge) {
+        thinkBadge.classList.remove('think-active');
+      }
+    }
+  }
+
+  function stopResponse() {
+    if (isGenerating && currentAbortController) {
+      try {
+        currentAbortController.abort();
+      } catch (e) {
+        console.warn('Abort error:', e);
+      }
+    }
+  }
+
+  // Intercept click on Send/Stop button while generating
+  const sendBtnEl = document.getElementById('send-btn');
+  if (sendBtnEl) {
+    sendBtnEl.addEventListener('click', (e) => {
+      if (isGenerating) {
+        e.preventDefault();
+        e.stopPropagation();
+        stopResponse();
+      }
+    });
+  }
+
+  // Press Escape to abort in-flight generation
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isGenerating) {
+      e.preventDefault();
+      stopResponse();
+    }
+  });
+
+  // Handle chat submission asynchronously
+  const chatForm = document.getElementById('chat-form');
+  if (chatForm) {
+    chatForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (isGenerating) {
+        stopResponse();
+        return;
+      }
+
+      const input = document.getElementById('chat-input');
+      const text = input ? input.value.trim() : '';
+      if (!text) return;
+
+      // 1. Instantly clear the text box!
+      input.value = '';
+      input.placeholder = (attachedDocs && attachedDocs.length > 0) ? "Ask a follow-up question..." : "Ask DocuMind AI anything, or attach a document...";
+      input.focus();
+
+      // 2. Hide welcome screen if present
+      const welcome = document.getElementById('in-chat-welcome-box');
+      if (welcome) welcome.style.display = 'none';
+
+      // 3. Render user message bubble immediately
+      const msgs = document.getElementById('chat-messages');
+      const indicator = document.getElementById('loading-indicator');
+      const indicatorText = document.getElementById('loading-indicator-text');
+      if (indicatorText) {
+        indicatorText.textContent = (attachedDocs && attachedDocs.length > 0)
+          ? "Searching document knowledge and formulating answer..."
+          : "DocuMind AI is thinking...";
+      }
+
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+      const todayDateStr = now.toISOString().slice(0, 10);
+
+      // Insert "Today" date divider if not present
+      if (msgs && !msgs.querySelector(`.chat-date-divider[data-date="${todayDateStr}"]`)) {
+        const dateDivider = document.createElement('div');
+        dateDivider.className = 'text-center my-2';
+        dateDivider.innerHTML = `
+          <span class="badge bg-white text-muted border shadow-sm px-3 py-1 rounded-pill chat-date-divider" style="font-size: 0.74rem;" data-date="${todayDateStr}">
+            <i class="bi bi-calendar3 me-1"></i> Today
+          </span>
+        `;
+        if (indicator) {
+          msgs.insertBefore(dateDivider, indicator);
+        } else {
+          msgs.appendChild(dateDivider);
+        }
+      }
+
+      const userBubble = document.createElement('div');
+      userBubble.className = 'd-flex justify-content-end align-items-start gap-2 mb-2';
+      userBubble.innerHTML = `
+        <div class="card bg-primary text-white p-3 border-0 shadow-sm" style="max-width: 75%; border-radius: 18px 18px 4px 18px;">
+          <div class="text-wrap font-sans" style="white-space: pre-wrap;">${escapeHtml(text)}</div>
+          <div class="text-end mt-1 text-white-50 d-flex align-items-center justify-content-end gap-1" style="font-size: 0.70rem;">
+            <i class="bi bi-clock" style="font-size: 0.65rem;"></i>
+            <span>${timeStr}</span>
+          </div>
+        </div>
+        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 36px; height: 36px; font-size: 0.85rem;">
+          <i class="bi bi-person-fill"></i>
+        </div>
+      `;
+      if (msgs && indicator) {
+        msgs.insertBefore(userBubble, indicator);
+        indicator.classList.remove('d-none');
+        indicator.classList.add('d-flex');
+        msgs.scrollTop = msgs.scrollHeight;
+      }
+
+      // 4. Activate ChatGPT-Style Stop Button & AbortController
+      setGeneratingState(true);
+      currentAbortController = new AbortController();
+
+      // 5. Build payload with doc_ids
+      const docIds = attachedDocs.map(d => Number(d.id)).filter(id => !isNaN(id));
+      const payload = {
+        question: text,
+        doc_ids: docIds
+      };
+
+      try {
+        const response = await fetch(chatForm.action, {
+          method: 'POST',
+          signal: currentAbortController.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          // Render assistant answer bubble
+          const assistantBubble = document.createElement('div');
+          assistantBubble.className = 'd-flex justify-content-start align-items-start gap-2 mb-2';
+
+          let citationsHtml = '';
+          if (data.sources && data.sources.length > 0) {
+            const citeBadges = data.sources.map(s => `
+              <details class="citation-detail">
+                <summary class="badge source-pill border py-1 px-2 cursor-pointer">
+                  📄 ${escapeHtml(s.doc_name)} (Page ${s.page_number})
+                  ${s.document_id ? `<a href="/documents/${s.document_id}/view" target="_blank" class="text-primary ms-1 text-decoration-none" title="Open original document in new tab"><i class="bi bi-box-arrow-up-right" style="font-size: 0.72rem;"></i></a>` : ''}
+                  ${s.score !== undefined && s.score !== null ? `<span class="badge bg-primary ms-1">${Math.round(s.score * 100)}%</span>` : ''}
+                </summary>
+                <div class="card card-body source-detail-body small mt-1 p-2 border-0">
+                  ${escapeHtml(s.snippet)}
+                </div>
+              </details>
+            `).join('');
+
+            citationsHtml = `
+              <div class="border-top pt-2 mt-2">
+                <small class="fw-bold text-muted d-block mb-1">
+                  <i class="bi bi-quote"></i> Grounded Citations (${data.sources.length}):
+                </small>
+                <div class="d-flex flex-wrap gap-2">
+                  ${citeBadges}
+                </div>
+              </div>
+            `;
+          }
+
+          assistantBubble.innerHTML = `
+            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 36px; height: 36px; font-size: 0.85rem;">
+              <i class="bi bi-robot"></i>
+            </div>
+            <div class="card bg-white p-3 border shadow-sm" style="max-width: 85%; border-radius: 18px 18px 18px 4px;">
+              <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
+                <span class="fw-semibold small text-primary d-flex align-items-center gap-1">
+                  <i class="bi bi-stars"></i> DocuMind AI
+                </span>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="text-muted d-flex align-items-center gap-1" style="font-size: 0.70rem;">
+                    <i class="bi bi-clock"></i>
+                    <span>${timeStr}</span>
+                  </span>
+                  <button type="button" class="btn btn-sm btn-link text-muted p-0 copy-msg-btn" onclick="copyMessageText(this)" title="Copy response">
+                    <i class="bi bi-clipboard" style="font-size: 0.8rem;"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="text-wrap font-sans mb-2 assistant-msg-content" style="line-height: 1.68;" data-raw="${escapeHtml(data.answer)}">${renderMarkdown(data.answer)}</div>
+              ${citationsHtml}
+            </div>
+          `;
+
+          if (msgs && indicator) {
+            msgs.insertBefore(assistantBubble, indicator);
+          }
+
+          // If this was a fresh unsaved chat, save it to history UI and update active conversation ID
+          if ((!activeConvId || activeConvId !== data.conv_id) && data.conv_id) {
+            activeConvId = data.conv_id;
+            STORAGE_KEY = 'documind_chat_inserted_docs_' + activeConvId;
+            LEGACY_STORAGE_KEY = 'documind_chat_inserted_doc_' + activeConvId;
+            chatForm.action = '/chat/' + data.conv_id + '/send';
+            window.history.replaceState({}, '', '/chat?c=' + data.conv_id);
+            if (data.attached_docs && data.attached_docs.length > 0) {
+              attachedDocs = data.attached_docs;
+            }
+            saveAttachedDocs(attachedDocs);
+
+            const historyList = document.getElementById('chat-history-list');
+            const noChatsHint = document.getElementById('no-chats-hint');
+            if (noChatsHint) noChatsHint.remove();
+
+            if (historyList && !document.getElementById('chat-row-' + data.conv_id)) {
+              const title = text.length > 35 ? (text.substring(0, 32) + '...') : text;
+              // Remove active highlight from any existing items
+              historyList.querySelectorAll('.chat-item-context').forEach(el => {
+                el.classList.remove('active', 'rounded');
+                const a = el.querySelector('a');
+                if (a) { a.classList.remove('text-white'); a.classList.add('chat-conv-link'); }
+              });
+
+              let todayHeader = historyList.querySelector('.chat-group-today');
+              if (!todayHeader) {
+                todayHeader = document.createElement('div');
+                todayHeader.className = 'chat-time-header chat-group-today px-2 pt-2 pb-1 text-muted text-uppercase fw-bold';
+                todayHeader.style.fontSize = '0.68rem';
+                todayHeader.style.letterSpacing = '0.5px';
+                todayHeader.innerHTML = '<i class="bi bi-calendar3 me-1"></i> Today';
+                historyList.prepend(todayHeader);
+              }
+
+              const row = document.createElement('div');
+              row.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center px-2 py-2 chat-item-context active rounded';
+              row.id = 'chat-row-' + data.conv_id;
+              row.setAttribute('data-conv-id', data.conv_id);
+              row.setAttribute('data-conv-title', title);
+              row.innerHTML = `
+                <a href="/chat?c=${data.conv_id}" class="text-decoration-none text-truncate flex-grow-1 d-flex flex-column text-white">
+                  <div class="d-flex align-items-center text-truncate">
+                    <i class="bi bi-chat-left-text me-1 flex-shrink-0"></i>
+                    <span class="conv-title-text text-truncate">${escapeHtml(title)}</span>
+                    <span class="chat-pin-icon d-none ms-1 flex-shrink-0"><i class="bi bi-pin-angle-fill text-warning" title="Pinned to top"></i></span>
+                  </div>
+                  <span class="chat-item-time text-truncate ps-3" style="font-size: 0.68rem; opacity: 0.85;">${timeStr}</span>
+                </a>
+                <form method="post" action="/chat/${data.conv_id}/delete" class="d-none chat-delete-form" id="delete-chat-form-${data.conv_id}"></form>
+              `;
+              todayHeader.after(row);
+            }
+          }
+        } else {
+          alert(data.error || 'Failed to generate response.');
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          console.log('Response generation stopped by user.');
+          const stoppedBubble = document.createElement('div');
+          stoppedBubble.className = 'd-flex justify-content-start align-items-start gap-2 mb-2 animate-fade-in';
+          stoppedBubble.innerHTML = `
+            <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 36px; height: 36px; font-size: 0.85rem;">
+              <i class="bi bi-robot"></i>
+            </div>
+            <div class="card bg-light p-2 px-3 border shadow-sm text-muted small" style="border-radius: 16px; border-left: 3px solid #64748b !important;">
+              <span class="d-flex align-items-center gap-2">
+                <i class="bi bi-stop-circle text-danger"></i>
+                <span>Response stopped by user.</span>
+              </span>
+            </div>
+          `;
+          if (msgs && indicator) {
+            msgs.insertBefore(stoppedBubble, indicator);
+          }
+        } else {
+          console.error('Chat error:', err);
+          const errorBubble = document.createElement('div');
+          errorBubble.className = 'd-flex justify-content-start align-items-start gap-2 mb-3';
+          errorBubble.innerHTML = `
+            <div class="rounded-circle bg-danger text-white d-flex align-items-center justify-content-center" style="width: 34px; height: 34px; font-size: 0.85rem;">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+            <div class="card bg-white p-3 border border-danger text-danger shadow-sm small" style="max-width: 85%; border-radius: 18px 18px 18px 4px;">
+              Failed to send message: ${escapeHtml(err.message || 'Network error')}. Please try again.
+            </div>
+          `;
+          if (msgs && indicator) {
+            msgs.insertBefore(errorBubble, indicator);
+          }
+        }
+      } finally {
+        setGeneratingState(false);
+        currentAbortController = null;
+        if (indicator) {
+          indicator.classList.add('d-none');
+          indicator.classList.remove('d-flex');
+        }
+        if (msgs) msgs.scrollTop = msgs.scrollHeight;
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput) chatInput.focus();
+      }
+    });
+  }
+
+  // ==========================================
+  // Right-Click Context Menu & Pinning Manager
+  // ==========================================
+  const PINNED_CHATS_KEY = 'documind_pinned_chats';
+  const PINNED_DOCS_KEY = 'documind_pinned_docs';
+
+  function getPinnedList(key) {
+    try {
+      const val = localStorage.getItem(key);
+      return val ? JSON.parse(val) : [];
+    } catch(e) {
+      return [];
+    }
+  }
+
+  function setPinnedList(key, list) {
+    try {
+      localStorage.setItem(key, JSON.stringify(list));
+    } catch(e) {}
+  }
+
+  function applyPinnedSorting() {
+    // 1. Sort pinned chats to top
+    const pinnedChats = getPinnedList(PINNED_CHATS_KEY);
+    const chatList = document.getElementById('chat-history-list');
+    if (chatList) {
+      for (let i = pinnedChats.length - 1; i >= 0; i--) {
+        const row = document.getElementById('chat-row-' + pinnedChats[i]);
+        if (row) {
+          const pinIcon = row.querySelector('.chat-pin-icon');
+          if (pinIcon) pinIcon.classList.remove('d-none');
+          chatList.prepend(row);
+        }
+      }
+    }
+
+    // 2. Sort pinned docs to top
+    const pinnedDocs = getPinnedList(PINNED_DOCS_KEY);
+    const docList = document.getElementById('previous-docs-list');
+    if (docList) {
+      for (let i = pinnedDocs.length - 1; i >= 0; i--) {
+        const row = document.getElementById('prev-doc-row-' + pinnedDocs[i]);
+        if (row) {
+          const pinIcon = row.querySelector('.doc-pin-icon');
+          if (pinIcon) pinIcon.classList.remove('d-none');
+          docList.prepend(row);
+        }
+      }
+    }
+  }
+
+  // Context Menu DOM Elements
+  const ctxMenu = document.getElementById('custom-context-menu');
+  const ctxViewDocBtn = document.getElementById('ctx-view-doc-btn');
+  const ctxPinBtn = document.getElementById('ctx-pin-btn');
+  const ctxPinText = document.getElementById('ctx-pin-text');
+  const ctxPinIcon = document.getElementById('ctx-pin-icon');
+  const ctxDeleteBtn = document.getElementById('ctx-delete-btn');
+  const ctxDeleteText = document.getElementById('ctx-delete-text');
+
+  let currentContextTarget = null; // { type: 'chat' | 'doc', id: string, rowEl: HTMLElement }
+
+  function hideContextMenu() {
+    if (ctxMenu) ctxMenu.classList.add('d-none');
+    if (ctxViewDocBtn) {
+      ctxViewDocBtn.classList.add('d-none');
+      ctxViewDocBtn.classList.remove('d-flex');
+    }
+    currentContextTarget = null;
+  }
+
+  // Right-click event listener on document
+  document.addEventListener('contextmenu', (e) => {
+    const chatRow = e.target.closest('.chat-item-context');
+    const docRow = e.target.closest('.doc-item-context');
+
+    if (chatRow) {
+      e.preventDefault();
+      const convId = chatRow.getAttribute('data-conv-id');
+      const pinned = getPinnedList(PINNED_CHATS_KEY).includes(convId);
+      currentContextTarget = { type: 'chat', id: convId, rowEl: chatRow };
+
+      if (ctxViewDocBtn) {
+        ctxViewDocBtn.classList.add('d-none');
+        ctxViewDocBtn.classList.remove('d-flex');
+      }
+      ctxPinText.textContent = pinned ? 'Unpin Chat' : 'Pin to Top';
+      ctxPinIcon.className = pinned ? 'bi bi-pin-angle-fill text-warning' : 'bi bi-pin-angle text-primary';
+      ctxDeleteText.textContent = 'Delete Chat';
+
+      showContextMenu(e.clientX, e.clientY);
+    } else if (docRow) {
+      e.preventDefault();
+      const docId = docRow.getAttribute('data-doc-id');
+      const pinned = getPinnedList(PINNED_DOCS_KEY).includes(docId);
+      currentContextTarget = { type: 'doc', id: docId, rowEl: docRow };
+
+      if (ctxViewDocBtn) {
+        ctxViewDocBtn.href = `/documents/${docId}/view`;
+        ctxViewDocBtn.classList.remove('d-none');
+        ctxViewDocBtn.classList.add('d-flex');
+      }
+      ctxPinText.textContent = pinned ? 'Unpin Document' : 'Pin to Top';
+      ctxPinIcon.className = pinned ? 'bi bi-pin-angle-fill text-warning' : 'bi bi-pin-angle text-primary';
+      ctxDeleteText.textContent = 'Delete Document';
+
+      showContextMenu(e.clientX, e.clientY);
+    } else {
+      hideContextMenu();
+    }
+  });
+
+  function showContextMenu(x, y) {
+    if (!ctxMenu) return;
+    ctxMenu.classList.remove('d-none');
+    const menuWidth = ctxMenu.offsetWidth || 160;
+    const menuHeight = ctxMenu.offsetHeight || 90;
+
+    let posX = x;
+    let posY = y;
+    if (posX + menuWidth > window.innerWidth) posX = window.innerWidth - menuWidth - 10;
+    if (posY + menuHeight > window.innerHeight) posY = window.innerHeight - menuHeight - 10;
+
+    ctxMenu.style.left = posX + 'px';
+    ctxMenu.style.top = posY + 'px';
+  }
+
+  // Pin / Unpin click handler
+  if (ctxPinBtn) {
+    ctxPinBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!currentContextTarget) return;
+
+      const { type, id, rowEl } = currentContextTarget;
+      const key = type === 'chat' ? PINNED_CHATS_KEY : PINNED_DOCS_KEY;
+      let list = getPinnedList(key);
+
+      if (list.includes(id)) {
+        // Unpin
+        list = list.filter(item => item !== id);
+        const icon = rowEl.querySelector(type === 'chat' ? '.chat-pin-icon' : '.doc-pin-icon');
+        if (icon) icon.classList.add('d-none');
+      } else {
+        // Pin to top
+        list.unshift(id);
+        const icon = rowEl.querySelector(type === 'chat' ? '.chat-pin-icon' : '.doc-pin-icon');
+        if (icon) icon.classList.remove('d-none');
+      }
+
+      setPinnedList(key, list);
+      applyPinnedSorting();
+      hideContextMenu();
+    });
+  }
+
+  // Delete click handler
+  if (ctxDeleteBtn) {
+    ctxDeleteBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!currentContextTarget) return;
+
+      const { type, id, rowEl } = currentContextTarget;
+      hideContextMenu();
+
+      if (type === 'chat') {
+        const deleteForm = rowEl.querySelector('.chat-delete-form');
+        if (deleteForm) {
+          if (confirm('Delete this chat?')) {
+            deleteForm.submit();
+          }
+        }
+      } else if (type === 'doc') {
+        const deleteForm = rowEl.querySelector('.doc-delete-form');
+        if (deleteForm) {
+          if (confirm('Delete this document?')) {
+            deleteForm.submit();
+          }
+        }
+      }
+    });
+  }
+
+  // Dismiss context menu on click outside, scroll, or Esc key
+  document.addEventListener('click', (e) => {
+    if (!ctxMenu.contains(e.target)) {
+      hideContextMenu();
+    }
+  });
+
+  window.addEventListener('scroll', hideContextMenu, true);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideContextMenu();
+  });
+
+  // Copy assistant message to clipboard
+  function copyMessageText(btn) {
+    const card = btn.closest('.card');
+    if (!card) return;
+    const contentEl = card.querySelector('.assistant-msg-content');
+    if (!contentEl) return;
+    const text = contentEl.getAttribute('data-raw') || contentEl.innerText || contentEl.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const icon = btn.querySelector('i');
+      if (icon) {
+        icon.className = 'bi bi-check2 text-success';
+        setTimeout(() => {
+          icon.className = 'bi bi-clipboard';
+        }, 2000);
+      }
+    }).catch(err => {
+      console.error('Copy failed:', err);
+    });
+  }
+
+  // Format all chat timestamps and date dividers to browser local time
+  function formatChatTimestamps() {
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+
+    // Format active chat header started time
+    const headerCreated = document.querySelector('.active-conv-created[data-utc]');
+    if (headerCreated) {
+      const utc = headerCreated.getAttribute('data-utc');
+      if (utc) {
+        const d = new Date(utc.endsWith('Z') ? utc : (utc + 'Z'));
+        if (!isNaN(d.getTime())) {
+          headerCreated.textContent = 'Started ' + d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+        }
+      }
+    }
+
+    // Format individual message time tags
+    document.querySelectorAll('.chat-time-tag[data-utc]').forEach(el => {
+      const utc = el.getAttribute('data-utc');
+      if (!utc) return;
+      try {
+        const d = new Date(utc.endsWith('Z') ? utc : (utc + 'Z'));
+        if (!isNaN(d.getTime())) {
+          el.textContent = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+        }
+      } catch (e) {}
+    });
+
+    // Format date dividers
+    document.querySelectorAll('.chat-date-divider[data-date]').forEach(el => {
+      const dateVal = el.getAttribute('data-date');
+      if (!dateVal) return;
+      try {
+        const d = new Date(dateVal + 'T00:00:00');
+        const nowMid = new Date(todayStr + 'T00:00:00');
+        const diffDays = Math.round((nowMid - d) / (1000 * 60 * 60 * 24));
+        if (diffDays === 0) {
+          el.innerHTML = '<i class="bi bi-calendar3 me-1"></i> Today';
+        } else if (diffDays === 1) {
+          el.innerHTML = '<i class="bi bi-calendar3 me-1"></i> Yesterday';
+        } else {
+          el.innerHTML = '<i class="bi bi-calendar3 me-1"></i> ' + d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
+        }
+      } catch(e) {}
+    });
+
+    // Format sidebar conversation timestamps
+    document.querySelectorAll('.chat-item-time[data-utc]').forEach(el => {
+      const utc = el.getAttribute('data-utc');
+      if (!utc) return;
+      try {
+        const d = new Date(utc.endsWith('Z') ? utc : (utc + 'Z'));
+        if (!isNaN(d.getTime())) {
+          const itemDateStr = d.toISOString().slice(0, 10);
+          if (itemDateStr === todayStr) {
+            el.textContent = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+          } else {
+            el.textContent = d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+          }
+        }
+      } catch(e) {}
+    });
+  }
+
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', () => {
+    loadAttachedDocs();
+    applyPinnedSorting();
+    formatChatTimestamps();
+
+    // Render formatted markdown for pre-rendered assistant messages
+    document.querySelectorAll('.assistant-msg-content').forEach(el => {
+      const raw = el.getAttribute('data-raw') || el.textContent;
+      if (raw) {
+        el.setAttribute('data-raw', raw);
+        el.innerHTML = renderMarkdown(raw);
+      }
+    });
+
+    const input = document.getElementById('chat-input');
+    if (input) input.value = '';
+    const msgs = document.getElementById('chat-messages');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+
+    // Think Mode Toggle
+    const thinkBtn = document.getElementById('think-mode-btn');
+    if (thinkBtn) {
+      let isThinkActive = false;
+      thinkBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        isThinkActive = !isThinkActive;
+        if (isThinkActive) {
+          thinkBtn.classList.add('think-active');
+          thinkBtn.title = 'Deep Reasoning Engine Active';
+        } else {
+          thinkBtn.classList.remove('think-active');
+          thinkBtn.title = 'Fast AI Mode';
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

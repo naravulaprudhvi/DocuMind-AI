@@ -1,0 +1,55 @@
+# ==============================================================================
+# DocuMind AI - Git Ignore
+# ==============================================================================
+
+# Environment & Sensitive Keys
+.env
+*.env
+!.env.example
+
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Local Storage, Uploads & Vector Indexes (preserve directory structure via .gitkeep)
+uploads/*
+!uploads/.gitkeep
+vector_indexes/*
+!vector_indexes/.gitkeep
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE & Editor Configurations
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Operating System & Temporary Files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+*.tmp
+*.bak
+
+# Docker local overrides
+docker-compose.override.yml

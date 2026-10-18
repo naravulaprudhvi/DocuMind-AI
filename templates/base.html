@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DocuMind AI — Intelligent Document Assistant</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('favicon') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+  <script>
+    (function() {
+      try {
+        const stored = localStorage.getItem('documind_theme') || 'system';
+        let theme = stored;
+        if (stored === 'system') {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-bs-theme', theme);
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body class="{% block body_class %}{% endblock %}">
+<div class="app-top-accent-bar"></div>
+<nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top py-2" id="main-navbar">
+  <div class="container">
+    <!-- Brand Logo & Identity -->
+    <a class="navbar-brand d-flex align-items-center gap-2 me-3" href="{{ url_for('dashboard') }}">
+      <span class="brand-badge-icon">
+        <i class="bi bi-cpu-fill"></i>
+      </span>
+      <div class="d-flex flex-column">
+        <span class="navbar-brand-text">DocuMind<span class="brand-accent-text">AI</span></span>
+        <span class="brand-subtext d-none d-sm-inline">Intelligent Document Assistant</span>
+      </div>
+    </a>
+
+    <!-- Live Engine Status Badge -->
+    <div class="status-pill d-none d-lg-inline-flex align-items-center gap-2" title="FAISS Vector Search & Real-time RAG Ready">
+      <span class="pulse-dot"></span>
+      <span class="status-text">AI Engine Active</span>
+    </div>
+
+    <!-- Mobile Menu Toggle Button -->
+    <button class="navbar-toggler border-0 p-2 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMainContent" aria-controls="navbarMainContent" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="bi bi-list fs-3 text-light"></i>
+    </button>
+
+    <!-- Collapsible Navigation Area -->
+    <div class="collapse navbar-collapse" id="navbarMainContent">
+      <ul class="navbar-nav ms-lg-4 me-auto mb-2 mb-lg-0 gap-1 align-items-lg-center">
+        {% if g.user %}
+          <!-- Chat Workspace Tab -->
+          <li class="nav-item">
+            <a class="nav-link-custom {% if request.endpoint in ['chat.chat', 'dashboard'] %}active{% endif %}" href="{{ url_for('chat.chat') }}" title="AI Chat Workspace">
+              <i class="bi bi-chat-dots-fill"></i>
+              <span>Chat</span>
+              {% if request.endpoint in ['chat.chat', 'dashboard'] %}
+                <span class="nav-active-dot"></span>
+              {% endif %}
+            </a>
+          </li>
+
+          <!-- Document Knowledge Base Tab -->
+          <li class="nav-item">
+            <a class="nav-link-custom {% if request.endpoint in ['documents.library', 'documents.view_document', 'documents.view_chunks', 'summaries.view_summary'] %}active{% endif %}" href="{{ url_for('documents.library') }}" title="Document Library & Vector Embeddings">
+              <i class="bi bi-collection-fill"></i>
+              <span>Knowledge Base</span>
+              {% if request.endpoint in ['documents.library', 'documents.view_document', 'documents.view_chunks', 'summaries.view_summary'] %}
+                <span class="nav-active-dot"></span>
+              {% endif %}
+            </a>
+          </li>
+        {% endif %}
+      </ul>
+
+      <!-- Right Action Controls -->
+      <div class="d-flex align-items-center gap-2 ms-auto pt-2 pt-lg-0">
+        <!-- Theme Mode Selector (System, Light, Dark) -->
+        <div class="dropdown" id="theme-selector-dropdown">
+          <button class="btn btn-sm btn-nav-action d-inline-flex align-items-center gap-1 dropdown-toggle shadow-none" type="button" id="themeMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Switch Theme">
+            <i class="bi bi-circle-half" id="theme-btn-icon"></i>
+            <span class="d-none d-xl-inline small" id="theme-btn-label">Auto</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 dropdown-menu-glass mt-2" aria-labelledby="themeMenuDropdown" style="min-width: 140px;">
+            <li>
+              <button class="dropdown-item d-flex align-items-center gap-2 py-2" type="button" data-theme-value="system">
+                <i class="bi bi-circle-half text-primary"></i>
+                <span class="small">System Auto</span>
+              </button>
+            </li>
+            <li>
+              <button class="dropdown-item d-flex align-items-center gap-2 py-2" type="button" data-theme-value="light">
+                <i class="bi bi-sun-fill text-warning"></i>
+                <span class="small">Light Mode</span>
+              </button>
+            </li>
+            <li>
+              <button class="dropdown-item d-flex align-items-center gap-2 py-2" type="button" data-theme-value="dark">
+                <i class="bi bi-moon-stars-fill text-info"></i>
+                <span class="small">Dark Mode</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        {% if g.user %}
+          <!-- Quick Action: New Chat -->
+          <a href="{{ url_for('chat.chat') }}" class="btn btn-sm btn-nav-action d-none d-sm-inline-flex align-items-center gap-1" title="Start a fresh conversation thread">
+            <i class="bi bi-plus-lg"></i>
+            <span>New Chat</span>
+          </a>
+
+          <!-- User Profile & Account Dropdown -->
+          <div class="dropdown">
+            <button class="btn btn-user-dropdown d-flex align-items-center gap-2 dropdown-toggle shadow-none" type="button" id="userMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+              <div class="user-avatar-initials">
+                {{ g.user.name[0]|upper if g.user.name else 'U' }}
+              </div>
+              <span class="user-display-name text-truncate d-none d-md-inline" style="max-width: 130px;">
+                {{ g.user.name }}
+              </span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 dropdown-menu-glass mt-2" aria-labelledby="userMenuDropdown">
+              <li class="dropdown-header px-3 py-2">
+                <div class="fw-bold text-body text-truncate">{{ g.user.name }}</div>
+                <div class="text-muted small text-truncate" style="font-size: 0.75rem;">{{ g.user.email }}</div>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle mt-1 rounded-pill" style="font-size: 0.68rem;">Active Workspace</span>
+              </li>
+              <li><hr class="dropdown-divider my-1"></li>
+              <li>
+                <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ url_for('dashboard') }}">
+                  <i class="bi bi-chat-left-dots text-primary"></i> AI Chat Assistant
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ url_for('documents.library') }}">
+                  <i class="bi bi-folder2-open text-info"></i> Document Knowledge Base
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ url_for('auth.profile') }}">
+                  <i class="bi bi-person-gear text-secondary"></i> Profile & Settings
+                </a>
+              </li>
+              <li><hr class="dropdown-divider my-1"></li>
+              <li>
+                <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger hover-danger" href="{{ url_for('auth.logout') }}">
+                  <i class="bi bi-box-arrow-right"></i> Sign Out
+                </a>
+              </li>
+              <li><hr class="dropdown-divider my-1"></li>
+              <li class="px-3 py-1.5 text-center">
+                <span class="text-muted" style="font-size: 0.68rem; display: block;">
+                  Developed by <strong class="text-body fw-semibold">Naravula Prudhvi Sri Bhanu Vivek</strong>
+                </span>
+              </li>
+            </ul>
+          </div>
+        {% else %}
+          <a class="nav-link-custom text-light" href="{{ url_for('auth.login') }}">
+            <i class="bi bi-box-arrow-in-right"></i> Sign In
+          </a>
+          <a class="btn btn-primary btn-sm px-3 rounded-pill shadow-sm d-inline-flex align-items-center gap-1" href="{{ url_for('auth.register') }}">
+            <span>Get Started</span> <i class="bi bi-arrow-right-short fs-6"></i>
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</nav>
+<div class="{% block container_class %}container py-3 py-md-4{% endblock %}">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show shadow-sm border-0 rounded-3 mb-4" role="alert">
+        <i class="bi bi-info-circle-fill me-2"></i> {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

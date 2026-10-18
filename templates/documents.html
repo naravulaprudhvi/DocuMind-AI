@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block content %}
+<!-- Header with Back to Chats / Previous Navigation -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div class="d-flex align-items-center gap-3">
+    <a href="{{ url_for('chat.chat') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 shadow-sm hover-primary" title="Return to Chat Conversation">
+      <i class="bi bi-arrow-left"></i> Previous (Chats)
+    </a>
+    <div>
+      <h4 class="fw-bold mb-1">Document Knowledge Base</h4>
+      <p class="text-muted small mb-0">Upload, manage, and extract structured knowledge from your files</p>
+    </div>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <a href="{{ url_for('chat.chat') }}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill shadow-sm" title="Open AI Chat Assistant">
+      <i class="bi bi-chat-dots-fill"></i> Go to Chat
+    </a>
+    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill">
+      <i class="bi bi-file-earmark-check me-1"></i> {{ docs|length }} Indexed Documents
+    </span>
+  </div>
+</div>
+
+<!-- Upload Dropzone Card -->
+<div class="card shadow-sm p-4 mb-4 border-0 position-relative overflow-hidden">
+  <!-- Shimmer Accent Bar -->
+  <div class="position-absolute top-0 start-0 w-100" style="height: 3px; background: var(--shimmer-gradient);"></div>
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <div class="brand-badge-icon flex-shrink-0" style="width: 44px; height: 44px; font-size: 1.25rem; border-radius: 12px;">
+        <i class="bi bi-cloud-arrow-up"></i>
+      </div>
+      <div>
+        <h6 class="fw-bold mb-1">Upload & Ingest New Document</h6>
+        <p class="text-muted small mb-0">
+          Supports PDF, Word (.docx, .doc), and text files. Automatic OCR, chunking, and FAISS vector embeddings.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="mt-3 pt-3 border-top">
+    <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-2">
+      <input class="form-control" type="file" name="pdf" accept=".pdf,.docx,.doc,.txt,.md" required style="max-width: 480px;">
+      <button class="btn btn-primary px-4 d-inline-flex align-items-center justify-content-center gap-2" type="submit">
+        <i class="bi bi-cloud-arrow-up"></i>
+        <span>Upload & Process</span>
+      </button>
+    </div>
+    <div class="d-flex gap-2 mt-2">
+      <span class="badge doc-format-badge" style="font-size: 0.70rem;">PDF</span>
+      <span class="badge doc-format-badge" style="font-size: 0.70rem;">DOCX / DOC</span>
+      <span class="badge doc-format-badge" style="font-size: 0.70rem;">TXT / MD</span>
+      <span class="badge doc-format-badge" style="font-size: 0.70rem;">Max 25MB</span>
+    </div>
+  </form>
+</div>
+
+<!-- Documents Table Card -->
+<div class="card shadow-sm border-0 overflow-hidden position-relative">
+  <div class="position-absolute top-0 start-0 w-100" style="height: 3px; background: var(--primary-gradient);"></div>
+  <div class="card-header py-3 border-bottom d-flex justify-content-between align-items-center">
+    <h6 class="mb-0 fw-bold">All Documents</h6>
+    <small class="text-muted">Showing {{ docs|length }} total</small>
+  </div>
+  <div class="table-responsive">
+    <table class="table align-middle mb-0 table-hover">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-4">Document</th>
+          <th>Status</th>
+          <th>Chunks</th>
+          <th>Uploaded At</th>
+          <th class="text-end pe-4">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for d in docs %}
+        <tr>
+          <td class="ps-4">
+            <div class="d-flex align-items-center gap-2">
+              <div class="p-2 doc-type-icon-box rounded text-center d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                {% if d.filename.lower().endswith(('.docx', '.doc')) %}
+                  <i class="bi bi-file-earmark-word text-primary fs-5"></i>
+                {% elif d.filename.lower().endswith('.pdf') %}
+                  <i class="bi bi-file-earmark-pdf text-danger fs-5"></i>
+                {% else %}
+                  <i class="bi bi-file-earmark-text text-secondary fs-5"></i>
+                {% endif %}
+              </div>
+              <div class="d-flex flex-column">
+                <a href="{{ url_for('documents.view_document', doc_id=d.document_id) }}" target="_blank" class="fw-semibold doc-table-title text-truncate text-decoration-none" style="max-width: 320px;" title="View original {{ d.filename }}">
+                  {{ d.filename }} <i class="bi bi-box-arrow-up-right ms-1 text-muted opacity-75" style="font-size: 0.72rem;"></i>
+                </a>
+                <span class="text-muted" style="font-size: 0.70rem;">ID: #{{ d.document_id }}</span>
+              </div>
+            </div>
+          </td>
+          <td>
+            {% if d.status == 'ready' %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill">
+                <i class="bi bi-check-circle-fill me-1"></i> Ready
+              </span>
+            {% elif d.status == 'processing' %}
+              <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 rounded-pill">
+                <span class="spinner-border spinner-border-sm me-1" role="status"></span> Processing...
+              </span>
+            {% elif d.status == 'failed' %}
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-pill">
+                <i class="bi bi-exclamation-circle-fill me-1"></i> Failed
+              </span>
+            {% else %}
+              <span class="badge bg-secondary-subtle text-secondary border px-2 py-1 rounded-pill">{{ d.status }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if d.chunks %}
+              <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1 rounded-pill">
+                <i class="bi bi-layers me-1"></i> {{ d.chunks|length }} chunks
+              </span>
+            {% else %}
+              <span class="text-muted small">0 chunks</span>
+            {% endif %}
+          </td>
+          <td class="text-muted small">{{ d.uploaded_at.strftime('%d %b %Y, %H:%M') }}</td>
+          <td class="text-end pe-4">
+            <div class="d-inline-flex gap-2">
+              <a href="{{ url_for('documents.view_document', doc_id=d.document_id) }}" target="_blank" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" title="View Original Document">
+                <i class="bi bi-eye"></i> View
+              </a>
+              {% if d.chunks|length > 0 %}
+                <a href="{{ url_for('summaries.view_summary', doc_id=d.document_id) }}" class="btn btn-sm btn-outline-info d-inline-flex align-items-center gap-1" title="Executive Summary">
+                  <i class="bi bi-file-text"></i> Summary
+                </a>
+                <a href="{{ url_for('documents.view_chunks', doc_id=d.document_id) }}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" title="Explore Chunks">
+                  <i class="bi bi-layers"></i> View Chunks
+                </a>
+              {% endif %}
+              
+              {% if d.status != 'ready' or d.chunks|length == 0 %}
+                <form method="post" action="{{ url_for('documents.process', doc_id=d.document_id) }}" class="d-inline">
+                  <button class="btn btn-sm btn-outline-success">Process</button>
+                </form>
+              {% endif %}
+
+              <form method="post" action="{{ url_for('documents.delete', doc_id=d.document_id) }}"
+                    onsubmit="return confirm('Delete this document and all its chunks?')" class="d-inline">
+                <button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1">
+                  <i class="bi bi-trash"></i> Delete
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="5" class="text-center py-5">
+            <div class="p-3 doc-type-icon-box rounded-circle d-inline-flex mb-3">
+              <i class="bi bi-cloud-arrow-up fs-2 text-muted"></i>
+            </div>
+            <h6 class="fw-bold mb-1">No documents in library</h6>
+            <p class="text-muted small mb-0">Upload a PDF or Word document above to start indexing</p>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

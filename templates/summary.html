@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+  <div>
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <a href="{{ url_for('documents.library') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
+        <i class="bi bi-arrow-left"></i> Back to Knowledge Base
+      </a>
+      <a href="{{ url_for('chat.chat') }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">
+        <i class="bi bi-chat-dots"></i> Back to Chat
+      </a>
+    </div>
+    <h4 class="fw-bold mb-1">{{ doc.filename }}</h4>
+    <p class="text-muted small mb-0">AI Executive Briefing & Key Insights</p>
+  </div>
+  <div class="d-flex gap-2 mt-2 mt-md-0">
+    <a href="{{ url_for('documents.view_document', doc_id=doc.document_id) }}" target="_blank" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
+      <i class="bi bi-eye"></i> View Original
+    </a>
+    <a href="{{ url_for('documents.view_chunks', doc_id=doc.document_id) }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">
+      <i class="bi bi-layers"></i> View Chunks
+    </a>
+    <a href="{{ url_for('chat.chat') }}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
+      <i class="bi bi-chat-dots"></i> Query in Chat
+    </a>
+  </div>
+</div>
+
+<!-- Metrics Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card p-3 shadow-sm border-0 bg-white">
+      <div class="text-muted small fw-medium mb-1">Word Count</div>
+      <div class="h4 mb-0 fw-bold text-primary">{{ summary.word_count }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card p-3 shadow-sm border-0 bg-white">
+      <div class="text-muted small fw-medium mb-1">Character Count</div>
+      <div class="h4 mb-0 fw-bold text-primary">{{ summary.char_count }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card p-3 shadow-sm border-0">
+      <div class="text-muted small fw-medium mb-1">Total Chunks</div>
+      <div class="h4 mb-0 fw-bold text-primary">{{ summary.chunk_count }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card p-3 shadow-sm border-0">
+      <div class="text-muted small fw-medium mb-1">Est. Read Time</div>
+      <div class="h4 mb-0 fw-bold text-primary">~{{ summary.estimated_read_time_min }} min</div>
+    </div>
+  </div>
+</div>
+
+<!-- Executive Summary -->
+<div class="card shadow-sm border-0 p-4 mb-4">
+  <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+    <i class="bi bi-journal-text text-primary"></i> Executive Overview
+  </h6>
+  <div class="p-4 summary-overview-box rounded lh-lg font-sans" style="font-size: 1rem; border-left: 4px solid var(--primary-color);">
+    {{ summary.overview }}
+  </div>
+</div>
+
+<!-- Key Highlights & Takeaways -->
+<div class="card shadow-sm border-0 p-4 mb-4">
+  <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+    <i class="bi bi-check2-circle text-success"></i> Key Highlights & Takeaways
+  </h6>
+  {% if summary.takeaways %}
+    <ul class="list-group list-group-flush">
+      {% for t in summary.takeaways %}
+        <li class="list-group-item px-0 py-3 d-flex align-items-start gap-3">
+          <div class="p-1 bg-primary bg-opacity-10 text-primary rounded-circle flex-shrink-0 mt-1">
+            <i class="bi bi-check2 fs-6"></i>
+          </div>
+          <span class="lh-base text-body">{{ t }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="text-muted mb-0">No specific highlight points extracted.</p>
+  {% endif %}
+</div>
+{% endblock %}

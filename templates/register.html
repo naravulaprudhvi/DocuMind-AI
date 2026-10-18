@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center align-items-center position-relative" style="min-height: 82vh;">
+  <!-- Ambient Background Aura Glow Orb -->
+  <div class="position-absolute" style="width: 380px; height: 380px; border-radius: 50%; background: radial-gradient(circle, rgba(139, 92, 246, 0.14) 0%, rgba(99, 102, 241, 0.08) 50%, transparent 75%); filter: blur(55px); z-index: 0; pointer-events: none;"></div>
+
+  <div class="col-md-6 col-lg-5 position-relative" style="z-index: 1;">
+    <div class="card auth-card shadow-lg border-0 p-4 p-md-5 position-relative overflow-hidden">
+      <!-- Ambient Gradient Accent Bar at Top -->
+      <div class="position-absolute top-0 start-0 w-100" style="height: 4px; background: var(--accent-gradient);"></div>
+      
+      <!-- Logo and Heading -->
+      <div class="text-center mb-4">
+        <div class="brand-badge mx-auto mb-3" style="width: 58px; height: 58px; font-size: 1.6rem; background: var(--accent-gradient);">
+          <i class="bi bi-person-plus-fill"></i>
+        </div>
+        <h4 class="fw-bold mb-1 tracking-tight">Create Account</h4>
+        <p class="text-muted small mb-2">Start querying your private documents with AI</p>
+        <div class="d-inline-flex align-items-center gap-1.5 px-2.5 py-1 rounded-pill bg-body-tertiary border text-secondary" style="font-size: 0.73rem;">
+          <i class="bi bi-code-slash text-primary"></i>
+          <span>Developed by <strong class="text-body">Naravula Prudhvi Sri Bhanu Vivek</strong></span>
+        </div>
+      </div>
+
+      <!-- Register Form -->
+      <form method="post" id="register-form">
+        <div class="mb-3">
+          <label class="form-label small fw-semibold text-secondary">Full Name</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-person"></i></span>
+            <input class="form-control" name="name" placeholder="John Doe" required autocomplete="name">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label small fw-semibold text-secondary">Email Address</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+            <input class="form-control" type="email" name="email" placeholder="name@company.com" required autocomplete="email">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label small fw-semibold text-secondary">Password</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+            <input class="form-control" type="password" id="reg-password" name="password" placeholder="Min. 6 characters" minlength="6" required autocomplete="new-password">
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label small fw-semibold text-secondary">Confirm Password</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
+            <input class="form-control" type="password" id="reg-confirm-password" name="confirm_password" placeholder="Re-enter password" minlength="6" required autocomplete="new-password">
+          </div>
+        </div>
+
+        <button class="btn btn-primary w-100 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2 shadow-sm" type="submit">
+          <i class="bi bi-check2-circle"></i>
+          <span>Create Account</span>
+        </button>
+      </form>
+
+      <!-- Bottom Switch to Login -->
+      <div class="text-center mt-4 pt-3 border-top">
+        <p class="text-muted small mb-0">
+          Already have an account? <a href="{{ url_for('auth.login') }}" class="fw-semibold text-primary text-decoration-none hover-primary">Login</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const regForm = document.getElementById('register-form');
+  if (regForm) {
+    regForm.addEventListener('submit', function(e) {
+      const p1 = document.getElementById('reg-password').value;
+      const p2 = document.getElementById('reg-confirm-password').value;
+      if (p1 !== p2) {
+        e.preventDefault();
+        alert('Passwords do not match. Please re-enter your password.');
+      }
+    });
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center align-items-center position-relative" style="min-height: 78vh;">
+  <!-- Ambient Background Aura Glow Orb -->
+  <div class="position-absolute" style="width: 360px; height: 360px; border-radius: 50%; background: radial-gradient(circle, rgba(99, 102, 241, 0.16) 0%, rgba(59, 130, 246, 0.08) 50%, transparent 75%); filter: blur(50px); z-index: 0; pointer-events: none;"></div>
+
+  <div class="col-md-5 col-lg-4 position-relative" style="z-index: 1;">
+    <div class="card auth-card shadow-lg border-0 p-4 p-md-5 position-relative overflow-hidden">
+      <!-- Ambient Gradient Accent Bar at Top -->
+      <div class="position-absolute top-0 start-0 w-100" style="height: 4px; background: var(--shimmer-gradient);"></div>
+      
+      <!-- Logo and Heading -->
+      <div class="text-center mb-4">
+        <div class="brand-badge mx-auto mb-3" style="width: 58px; height: 58px; font-size: 1.6rem;">
+          <i class="bi bi-cpu-fill"></i>
+        </div>
+        <h4 class="fw-bold mb-1 tracking-tight">Welcome Back</h4>
+        <p class="text-muted small mb-2">Sign in to your DocuMind AI workspace</p>
+        <div class="d-inline-flex align-items-center gap-1.5 px-2.5 py-1 rounded-pill bg-body-tertiary border text-secondary" style="font-size: 0.73rem;">
+          <i class="bi bi-code-slash text-primary"></i>
+          <span>Developed by <strong class="text-body">Naravula Prudhvi Sri Bhanu Vivek</strong></span>
+        </div>
+      </div>
+
+      <!-- Login Form -->
+      <form method="post">
+        <div class="mb-3">
+          <label class="form-label small fw-semibold text-secondary">Email Address</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+            <input class="form-control" type="email" name="email" placeholder="name@company.com" required autocomplete="email">
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label small fw-semibold text-secondary mb-0">Password</label>
+          </div>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+            <input class="form-control" type="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+          </div>
+        </div>
+
+        <button class="btn btn-primary w-100 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2 shadow-sm" type="submit">
+          <i class="bi bi-box-arrow-in-right"></i>
+          <span>Login</span>
+        </button>
+      </form>
+
+      <!-- Bottom Switch to Register -->
+      <div class="text-center mt-4 pt-3 border-top">
+        <p class="text-muted small mb-0">
+          New here? <a href="{{ url_for('auth.register') }}" class="fw-semibold text-primary text-decoration-none hover-primary">Create account</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
