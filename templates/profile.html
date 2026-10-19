@@ -26,10 +26,10 @@
   </div>
 </div>
 
-<!-- Usage Statistics Row -->
+<!-- Usage & Database Telemetry Row -->
 <div class="row g-3 mb-4">
-  <div class="col-md-6">
-    <div class="card shadow-sm p-3">
+  <div class="col-md-4">
+    <div class="card shadow-sm p-3 h-100">
       <div class="d-flex align-items-center gap-3">
         <div class="brand-badge-icon flex-shrink-0" style="width: 48px; height: 48px; border-radius: 14px; font-size: 1.35rem;">
           <i class="bi bi-file-earmark-text"></i>
@@ -42,8 +42,8 @@
     </div>
   </div>
 
-  <div class="col-md-6">
-    <div class="card shadow-sm p-3">
+  <div class="col-md-4">
+    <div class="card shadow-sm p-3 h-100">
       <div class="d-flex align-items-center gap-3">
         <div class="flex-shrink-0" style="background: var(--accent-cyan); width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.35); font-size: 1.35rem;">
           <i class="bi bi-shield-check"></i>
@@ -51,6 +51,22 @@
         <div>
           <div class="text-muted small">Data Privacy</div>
           <div class="h6 fw-bold mb-0 text-primary">Private & Isolated</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card shadow-sm p-3 h-100">
+      <div class="d-flex align-items-center gap-3">
+        <div class="flex-shrink-0" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35); font-size: 1.35rem;">
+          <i class="bi {{ db_info.icon if db_info else 'bi-database' }}"></i>
+        </div>
+        <div>
+          <div class="text-muted small">Application Database</div>
+          <div class="h6 fw-bold mb-0 {% if db_info and db_info.is_persistent %}text-success{% else %}text-warning{% endif %}">
+            {{ db_info.label if db_info else 'Connected' }}
+          </div>
         </div>
       </div>
     </div>

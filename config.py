@@ -16,6 +16,30 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 load_dotenv()  # reads the .env file
 
 
+def sanitize_database_url(url: str) -> str:
+    """Auto-sanitizes database URLs, encoding special characters in passwords and adding SSL for Supabase/Neon."""
+    if not url:
+        return url
+    url = url.strip()
+    import re
+    from urllib.parse import quote
+    # Matches: postgresql://username:password@hostname:port/dbname
+    m = re.match(r"^(?P<scheme>[a-zA-Z0-9\+\-]+://)(?P<user>[^:]+):(?P<password>.+)@(?P<host>[^@/]+)/(?P<rest>.*)$", url)
+    if m:
+        scheme = m.group("scheme")
+        user = m.group("user")
+        password = m.group("password")
+        host = m.group("host")
+        rest = m.group("rest")
+        if "@" in password and "%40" not in password:
+            encoded_password = quote(password, safe="")
+            url = f"{scheme}{user}:{encoded_password}@{host}/{rest}"
+    if ("supabase.co" in url or "neon.tech" in url or "pooler.supabase" in url) and "sslmode=" not in url:
+        sep = "&" if "?" in url else "?"
+        url = f"{url}{sep}sslmode=require"
+    return url
+
+
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-me")
 
@@ -53,7 +77,7 @@ class Config:
             "connect_args": {"timeout": 15},
         }
     elif DATABASE_URL:
-        raw_url = DATABASE_URL.strip()
+        raw_url = sanitize_database_url(DATABASE_URL.strip())
         if raw_url.startswith("postgres://"):
             SQLALCHEMY_DATABASE_URI = raw_url.replace("postgres://", "postgresql+psycopg2://", 1)
         elif raw_url.startswith("postgresql://") and "+psycopg2" not in raw_url:
@@ -64,13 +88,21 @@ class Config:
             SQLALCHEMY_DATABASE_URI = raw_url
 
         connect_args = {}
-        if "mysql" in SQLALCHEMY_DATABASE_URI:
-            connect_args = {"connect_timeout": 10}
-        elif "postgres" in SQLALCHEMY_DATABASE_URI:
+        if "postgres" in SQLALCHEMY_DATABASE_URI:
+            connect_args = {
+                "connect_timeout": 15,
+                "application_name": "DocuMind-AI",
+            }
+        elif "mysql" in SQLALCHEMY_DATABASE_URI:
             connect_args = {"connect_timeout": 10}
 
+        # Supabase / Neon Cloud PostgreSQL optimizations:
+        # pool_recycle: 300 prevents dropped connections when serverless poolers idle
+        # pool_pre_ping: True tests connection health before sending queries
         SQLALCHEMY_ENGINE_OPTIONS = {
-            "pool_recycle": 1800,
+            "pool_size": 10,
+            "max_overflow": 20,
+            "pool_recycle": 300,
             "pool_pre_ping": True,
             "connect_args": connect_args,
         }
@@ -97,7 +129,8 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = IS_CLOUD or os.getenv("SESSION_COOKIE_SECURE", "false").lower() in ("true", "1")
-    PERMANENT_SESSION_LIFETIME = 86400  # 24 hours
+    PERMANENT_SESSION_LIFETIME = 86400 * 7  # 7 days persistent session
+    SESSION_PERMANENT = True
 
     # LLM and Local Model configuration
     # Options: "gemini", "ollama", "openai", "local_fallback"
@@ -112,3 +145,46 @@ class Config:
     # Ensure folders exist
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     os.makedirs(VECTOR_FOLDER, exist_ok=True)
+
+    @classmethod
+    def get_db_telemetry(cls) -> dict:
+        """Returns database persistence telemetry for live UI status indicators."""
+        uri = getattr(cls, "SQLALCHEMY_DATABASE_URI", "")
+        if "postgres" in uri:
+            provider = "Supabase / Neon Cloud" if ("supabase" in uri or "neon" in uri or "pooler" in uri) else "Cloud PostgreSQL"
+            return {
+                "type": "Cloud PostgreSQL",
+                "label": f"{provider} (Permanent)",
+                "icon": "bi-database-fill-check",
+                "badge_class": "bg-success-subtle text-success border-success-subtle",
+                "is_persistent": True,
+                "warning": None,
+            }
+        elif "mysql" in uri:
+            is_local = "localhost" in uri or "127.0.0.1" in uri
+            return {
+                "type": "MySQL Database",
+                "label": "Local MySQL" if is_local else "Cloud MySQL",
+                "icon": "bi-database-check",
+                "badge_class": "bg-info-subtle text-info border-info-subtle",
+                "is_persistent": True,
+                "warning": None,
+            }
+        else:
+            if cls.IS_CLOUD:
+                return {
+                    "type": "Cloud Ephemeral SQLite",
+                    "label": "Ephemeral Cloud (Temporary)",
+                    "icon": "bi-database-exclamation",
+                    "badge_class": "bg-warning-subtle text-warning-emphasis border-warning-subtle",
+                    "is_persistent": False,
+                    "warning": "Cloud ephemeral storage active! Add DATABASE_URL (Supabase/Neon) in environment variables so accounts and data are never erased on restart.",
+                }
+            return {
+                "type": "Local SQLite",
+                "label": "Local SQLite (Disk)",
+                "icon": "bi-database-fill",
+                "badge_class": "bg-secondary-subtle text-secondary border-secondary-subtle",
+                "is_persistent": True,
+                "warning": None,
+            }

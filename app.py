@@ -49,6 +49,12 @@ def create_app():
         )
         return response
 
+    @app.context_processor
+    def inject_global_telemetry():
+        return {
+            "db_info": Config.get_db_telemetry(),
+        }
+
     # Trust proxy headers (HTTPS, client IP, host) behind Render/Cloud reverse proxies
     try:
         from werkzeug.middleware.proxy_fix import ProxyFix
@@ -59,7 +65,7 @@ def create_app():
     with app.app_context():
         try:
             db.create_all()  # creates tables if they do not exist
-            # SQLite performance tuning and auto-migration
+            # Performance tuning & auto-migration
             engine = db.engine
             if "sqlite" in str(engine.url):
                 with engine.connect() as conn:
@@ -76,7 +82,8 @@ def create_app():
         except Exception as e:
             import logging
             logging.error(f"Database initialization warning: {e}")
-            if getattr(Config, "IS_CLOUD", False):
+            # Fallback to local SQLite ONLY if no external DATABASE_URL was configured
+            if getattr(Config, "IS_CLOUD", False) and not getattr(Config, "DATABASE_URL", None):
                 try:
                     import os
                     logging.info("Falling back to SQLite database for cloud resilience...")

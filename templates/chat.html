@@ -9,6 +9,14 @@
     <h5 class="fw-bold mb-0">Welcome, {{ g.user.name }} 👋</h5>
     <p class="text-muted small mb-0 d-none d-sm-block">Ask questions, search through your documents, and manage chat history</p>
   </div>
+  <div class="d-flex align-items-center gap-2">
+    {% if db_info %}
+      <span class="badge {{ db_info.badge_class }} px-2.5 py-1.5 rounded-pill d-inline-flex align-items-center gap-1.5" style="font-size: 0.74rem;">
+        <i class="bi {{ db_info.icon }}"></i>
+        <span>{{ db_info.label }}</span>
+      </span>
+    {% endif %}
+  </div>
 </div>
 
 <div class="row g-3 chat-main-row">
@@ -124,14 +132,14 @@
     <div class="card shadow-sm border-0 d-flex flex-column position-relative chat-workspace-card" id="chat-drag-container">
       
       <!-- Drag & drop overlay indicator -->
-      <div id="chat-drop-overlay" class="position-absolute top-0 start-0 w-100 h-100 d-none flex-column align-items-center justify-content-center bg-white bg-opacity-90" style="z-index: 100;">
+      <div id="chat-drop-overlay" class="position-absolute top-0 start-0 w-100 h-100 d-none flex-column align-items-center justify-content-center chat-drop-overlay-bg" style="z-index: 100;">
         <i class="bi bi-cloud-arrow-up fs-1 text-primary mb-2"></i>
         <h5 class="fw-bold mb-1">Drop document to connect to this chat</h5>
         <p class="text-muted small">Supports PDF and Word (.docx, .doc)</p>
       </div>
 
       <!-- Chat Header -->
-      <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+      <div class="card-header py-3 border-bottom d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center gap-2">
           <div class="chat-header-robot flex-shrink-0">
             <i class="bi bi-robot fs-5"></i>
@@ -148,7 +156,7 @@
           </div>
         </div>
         <div class="d-flex align-items-center gap-2">
-          <span id="active-scope-badge" class="badge bg-light text-muted border px-3 py-2">
+          <span id="active-scope-badge" class="badge status-pill px-3 py-2">
             <i class="bi bi-paperclip"></i> <span id="connected-doc-label">No document connected</span>
           </span>
           {% if has_gemini %}
@@ -171,7 +179,7 @@
             {% if msg_date and msg_date != prev_date.val %}
               {% set prev_date.val = msg_date %}
               <div class="text-center my-2">
-                <span class="badge bg-white text-muted border shadow-sm px-3 py-1 rounded-pill chat-date-divider" style="font-size: 0.74rem;" data-date="{{ msg_date }}">
+                <span class="badge chat-date-divider px-3 py-1 rounded-pill" style="font-size: 0.74rem;" data-date="{{ msg_date }}">
                   <i class="bi bi-calendar3 me-1"></i>
                   {{ m.created_at.strftime('%B %d, %Y') if m.created_at else '' }}
                 </span>
@@ -181,7 +189,7 @@
             {% if m.role == 'user' %}
               <!-- User Message -->
               <div class="d-flex justify-content-end align-items-start gap-2 mb-2">
-                <div class="card bg-primary text-white p-3 border-0 shadow-sm" style="max-width: 75%; border-radius: 18px 18px 4px 18px;">
+                <div class="card user-msg-bubble p-3 border-0 shadow-sm" style="max-width: 75%; border-radius: 18px 18px 4px 18px;">
                   <div class="text-wrap font-sans" style="white-space: pre-wrap;">{{ m.content }}</div>
                   <div class="text-end mt-1 text-white-50 d-flex align-items-center justify-content-end gap-1" style="font-size: 0.70rem;">
                     <i class="bi bi-clock" style="font-size: 0.65rem;"></i>
@@ -198,7 +206,7 @@
                 <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 36px; height: 36px; font-size: 0.85rem;">
                   <i class="bi bi-robot"></i>
                 </div>
-                <div class="card bg-white p-3 border shadow-sm" style="max-width: 85%; border-radius: 18px 18px 18px 4px;">
+                <div class="card assistant-msg-bubble p-3 border shadow-sm" style="max-width: 85%; border-radius: 18px 18px 18px 4px;">
                   <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
                     <span class="fw-semibold small text-primary d-flex align-items-center gap-1">
                       <i class="bi bi-stars"></i> DocuMind AI
@@ -302,7 +310,7 @@
           <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 36px; height: 36px;">
             <i class="bi bi-robot"></i>
           </div>
-          <div class="card bg-white p-3 border shadow-sm" style="border-radius: 18px 18px 18px 4px;">
+          <div class="card assistant-msg-bubble p-3 border shadow-sm" style="border-radius: 18px 18px 18px 4px;">
             <div class="d-flex align-items-center gap-3">
               <div class="typing-dots">
                 <span class="typing-dot"></span>

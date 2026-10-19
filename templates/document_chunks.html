@@ -27,19 +27,19 @@
 
 <div class="row g-3 mb-4">
   <div class="col-md-4">
-    <div class="card p-3 shadow-sm border-0 bg-white">
+    <div class="card p-3 shadow-sm card-theme">
       <div class="text-muted small fw-medium mb-1">Total Chunks</div>
       <div class="h4 mb-0 fw-bold text-primary">{{ chunks|length }}</div>
     </div>
   </div>
   <div class="col-md-4">
-    <div class="card p-3 shadow-sm border-0 bg-white">
+    <div class="card p-3 shadow-sm card-theme">
       <div class="text-muted small fw-medium mb-1">Uploaded Date</div>
       <div class="h6 mb-0 fw-bold">{{ doc.uploaded_at.strftime('%d %b %Y, %H:%M') }}</div>
     </div>
   </div>
   <div class="col-md-4">
-    <div class="card p-3 shadow-sm border-0 bg-white">
+    <div class="card p-3 shadow-sm card-theme">
       <div class="text-muted small fw-medium mb-1">FAISS Vector Index</div>
       <div class="h6 mb-0">
         {% if indexed %}

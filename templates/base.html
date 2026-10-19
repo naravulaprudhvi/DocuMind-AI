@@ -46,9 +46,17 @@
       <span class="status-text">AI Engine Active</span>
     </div>
 
+    <!-- Live Database Persistence Telemetry Pill -->
+    {% if db_info %}
+      <div class="status-pill d-none d-xl-inline-flex align-items-center gap-1.5 ms-2" title="Application Database: {{ db_info.type }}">
+        <i class="bi {{ db_info.icon }} {% if db_info.is_persistent %}text-success{% else %}text-warning{% endif %}"></i>
+        <span class="status-text">{{ db_info.label }}</span>
+      </div>
+    {% endif %}
+
     <!-- Mobile Menu Toggle Button -->
     <button class="navbar-toggler border-0 p-2 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMainContent" aria-controls="navbarMainContent" aria-expanded="false" aria-label="Toggle navigation">
-      <i class="bi bi-list fs-3 text-light"></i>
+      <i class="bi bi-list fs-3 text-main"></i>
     </button>
 
     <!-- Collapsible Navigation Area -->
@@ -128,9 +136,13 @@
             </button>
             <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 dropdown-menu-glass mt-2" aria-labelledby="userMenuDropdown">
               <li class="dropdown-header px-3 py-2">
-                <div class="fw-bold text-body text-truncate">{{ g.user.name }}</div>
+                <div class="fw-bold text-main text-truncate">{{ g.user.name }}</div>
                 <div class="text-muted small text-truncate" style="font-size: 0.75rem;">{{ g.user.email }}</div>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle mt-1 rounded-pill" style="font-size: 0.68rem;">Active Workspace</span>
+                <div class="d-flex align-items-center gap-1 mt-1">
+                  <span class="badge {{ db_info.badge_class if db_info else 'bg-primary-subtle text-primary' }} rounded-pill" style="font-size: 0.68rem;">
+                    <i class="bi {{ db_info.icon if db_info else 'bi-database' }} me-1"></i> {{ db_info.label if db_info else 'Active Workspace' }}
+                  </span>
+                </div>
               </li>
               <li><hr class="dropdown-divider my-1"></li>
               <li>
@@ -145,7 +157,7 @@
               </li>
               <li>
                 <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ url_for('auth.profile') }}">
-                  <i class="bi bi-person-gear text-secondary"></i> Profile & Settings
+                  <i class="bi bi-person-gear text-secondary"></i> Profile & Database Settings
                 </a>
               </li>
               <li><hr class="dropdown-divider my-1"></li>
@@ -157,13 +169,13 @@
               <li><hr class="dropdown-divider my-1"></li>
               <li class="px-3 py-1.5 text-center">
                 <span class="text-muted" style="font-size: 0.68rem; display: block;">
-                  Developed by <strong class="text-body fw-semibold">Naravula Prudhvi Sri Bhanu Vivek</strong>
+                  Developed by <strong class="text-main fw-semibold">Naravula Prudhvi Sri Bhanu Vivek</strong>
                 </span>
               </li>
             </ul>
           </div>
         {% else %}
-          <a class="nav-link-custom text-light" href="{{ url_for('auth.login') }}">
+          <a class="nav-link-custom text-main" href="{{ url_for('auth.login') }}">
             <i class="bi bi-box-arrow-in-right"></i> Sign In
           </a>
           <a class="btn btn-primary btn-sm px-3 rounded-pill shadow-sm d-inline-flex align-items-center gap-1" href="{{ url_for('auth.register') }}">
@@ -174,6 +186,20 @@
     </div>
   </div>
 </nav>
+
+<!-- Cloud Ephemeral Storage Warning Banner (if running on cloud without persistent DATABASE_URL) -->
+{% if db_info and db_info.warning %}
+  <div class="container mt-3">
+    <div class="alert alert-warning alert-dismissible fade show shadow-sm border-0 rounded-3 d-flex align-items-center gap-2" role="alert">
+      <i class="bi bi-exclamation-triangle-fill fs-5 text-warning flex-shrink-0"></i>
+      <div class="small flex-grow-1">
+        <strong>Database Persistence Notice:</strong> {{ db_info.warning }}
+      </div>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  </div>
+{% endif %}
+
 <div class="{% block container_class %}container py-3 py-md-4{% endblock %}">
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% for category, message in messages %}

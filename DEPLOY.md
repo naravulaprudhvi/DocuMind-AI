@@ -38,7 +38,9 @@ This folder includes both `Procfile` and `runtime.txt`.
 2. Select **Python** runtime or Docker.
 3. Configure your Environment Variables in the provider's dashboard:
    - `SECRET_KEY`: A strong random string (e.g., generate with `python -c "import secrets; print(secrets.token_hex(32))"`)
-   - `DATABASE_URL`: Your production MySQL or PostgreSQL connection string
+   - `DATABASE_URL`: **(Recommended)** Your permanent cloud PostgreSQL connection string from [Supabase](https://supabase.com) or [Neon](https://neon.tech):
+     `postgresql://postgres.xxxx:yourpassword@aws-0-us-east-1.pooler.supabase.com:6543/postgres`
+     *(This ensures user accounts and documents are never lost when free cloud containers sleep or redeploy)*
    - `GEMINI_API_KEY`: Your Google Gemini API key
    - `PORT`: Set automatically by the hosting provider (defaults to 5000)
 
