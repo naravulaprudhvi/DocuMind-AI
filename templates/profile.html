@@ -19,7 +19,7 @@
       </div>
     </div>
     <div>
-      <span class="badge bg-success py-2 px-3">
+      <span class="badge badge-soft-success py-2 px-3 rounded-pill">
         <i class="bi bi-check-circle-fill me-1"></i> Active Account
       </span>
     </div>
@@ -115,21 +115,39 @@
 
         <div class="mb-3">
           <label class="form-label small fw-semibold text-secondary" for="current_password">Current Password</label>
-          <input type="password" id="current_password" name="current_password" class="form-control" placeholder="Current password" required autocomplete="current-password">
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+            <input type="password" id="current_password" name="current_password" class="form-control" placeholder="Current password" required autocomplete="current-password">
+            <button class="btn btn-toggle-password px-2.5" type="button" onclick="togglePasswordVisibility('current_password', this)">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
         </div>
 
         <div class="mb-3">
           <label class="form-label small fw-semibold text-secondary" for="new_password">New Password</label>
-          <input type="password" id="new_password" name="new_password" class="form-control" placeholder="Minimum 6 characters" minlength="6" required autocomplete="new-password">
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-key"></i></span>
+            <input type="password" id="new_password" name="new_password" class="form-control" placeholder="Minimum 6 characters" minlength="6" required autocomplete="new-password">
+            <button class="btn btn-toggle-password px-2.5" type="button" onclick="togglePasswordVisibility('new_password', this)">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
         </div>
 
         <div class="mb-4">
           <label class="form-label small fw-semibold text-secondary" for="confirm_password">Confirm New Password</label>
-          <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="Repeat new password" minlength="6" required autocomplete="new-password">
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
+            <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="Repeat new password" minlength="6" required autocomplete="new-password">
+            <button class="btn btn-toggle-password px-2.5" type="button" onclick="togglePasswordVisibility('confirm_password', this)">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
         </div>
 
         <div class="d-flex justify-content-end">
-          <button type="submit" class="btn btn-outline-primary">
+          <button type="submit" class="btn btn-outline-primary d-inline-flex align-items-center gap-1.5">
             <i class="bi bi-shield-lock"></i> Update Password
           </button>
         </div>
@@ -290,4 +308,18 @@
   </div>
 </div>
 
+<script>
+  function togglePasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') {
+      input.type = 'text';
+      if (icon) { icon.classList.remove('bi-eye'); icon.classList.add('bi-eye-slash'); }
+    } else {
+      input.type = 'password';
+      if (icon) { icon.classList.remove('bi-eye-slash'); icon.classList.add('bi-eye'); }
+    }
+  }
+</script>
 {% endblock %}

@@ -1562,3 +1562,219 @@ pre code {
   border: 1px solid var(--card-border) !important;
   color: var(--text-muted) !important;
 }
+
+/* ==========================================================================
+   12. Advanced Enterprise UI Utilities (Modern SaaS Aesthetics)
+   ========================================================================== */
+
+/* Universal Telemetry Stat Card (The signature look praised by user) */
+.telemetry-stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 1.15rem 1.25rem;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  height: 100%;
+  box-shadow: var(--shadow-sm);
+}
+
+.telemetry-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--card-border-focus);
+  box-shadow: var(--shadow-md);
+}
+
+/* Card Elevated Container */
+.card-elevated {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  border-radius: 16px !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.card-elevated:hover {
+  border-color: var(--card-border-focus) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* High-Contrast Soft Badges */
+.badge-soft-primary {
+  background: var(--primary-light) !important;
+  color: var(--primary-color) !important;
+  border: 1px solid var(--card-border-focus) !important;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .badge-soft-primary {
+  color: var(--accent-cyan) !important;
+}
+
+.badge-soft-success {
+  background: rgba(16, 185, 129, 0.12) !important;
+  color: #059669 !important;
+  border: 1px solid rgba(16, 185, 129, 0.25) !important;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .badge-soft-success {
+  color: #34d399 !important;
+  border-color: rgba(52, 211, 153, 0.3) !important;
+}
+
+.badge-soft-warning {
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: #d97706 !important;
+  border: 1px solid rgba(245, 158, 11, 0.25) !important;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .badge-soft-warning {
+  color: #fbbf24 !important;
+  border-color: rgba(251, 191, 36, 0.3) !important;
+}
+
+.badge-soft-danger {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #dc2626 !important;
+  border: 1px solid rgba(239, 68, 68, 0.25) !important;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .badge-soft-danger {
+  color: #f87171 !important;
+  border-color: rgba(248, 113, 113, 0.3) !important;
+}
+
+.badge-soft-info {
+  background: rgba(2, 132, 199, 0.12) !important;
+  color: #0284c7 !important;
+  border: 1px solid rgba(2, 132, 199, 0.25) !important;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .badge-soft-info {
+  color: #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.3) !important;
+}
+
+.badge-soft-violet {
+  background: rgba(139, 92, 246, 0.12) !important;
+  color: #7c3aed !important;
+  border: 1px solid rgba(139, 92, 246, 0.25) !important;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .badge-soft-violet {
+  color: #a78bfa !important;
+  border-color: rgba(167, 139, 250, 0.3) !important;
+}
+
+/* Modern Document Upload Dropzone */
+.upload-dropzone-box {
+  border: 2px dashed var(--card-border-focus);
+  background: var(--bg-surface-1);
+  border-radius: 18px;
+  padding: 2.25rem 1.5rem;
+  text-align: center;
+  transition: all 0.22s ease;
+  position: relative;
+}
+
+.upload-dropzone-box:hover,
+.upload-dropzone-box.dragover {
+  border-color: var(--primary-color);
+  background: var(--primary-light);
+  box-shadow: var(--glow-cyan);
+}
+
+/* Modern Clean Table Styling */
+.table-modern {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+
+.table-modern thead th {
+  background: var(--bg-surface-1);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--card-border);
+  padding: 0.85rem 1.15rem;
+  white-space: nowrap;
+}
+
+.table-modern tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.table-modern tbody tr:hover {
+  background-color: var(--bg-surface-1) !important;
+}
+
+.table-modern tbody td {
+  padding: 0.95rem 1.15rem;
+  border-bottom: 1px solid var(--card-border-subtle);
+  vertical-align: middle;
+}
+
+/* Modern Form Controls */
+.form-control, .form-select {
+  background-color: var(--bg-surface-2) !important;
+  border: 1px solid var(--card-border) !important;
+  color: var(--text-main) !important;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  padding: 0.55rem 0.85rem;
+  transition: all 0.18s ease;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--card-border-focus) !important;
+  box-shadow: 0 0 0 3px var(--primary-light) !important;
+  background-color: var(--bg-surface-2) !important;
+  color: var(--text-main) !important;
+}
+
+.input-group-text {
+  background-color: var(--bg-surface-1) !important;
+  border: 1px solid var(--card-border) !important;
+  color: var(--text-muted) !important;
+  border-radius: 10px;
+}
+
+/* Password Visibility Toggle Button */
+.btn-toggle-password {
+  background-color: var(--bg-surface-1) !important;
+  border: 1px solid var(--card-border) !important;
+  border-left: none !important;
+  color: var(--text-muted) !important;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.btn-toggle-password:hover {
+  color: var(--text-main) !important;
+}
+
+/* Summary Overview Callout */
+.summary-overview-box {
+  background-color: var(--bg-surface-1);
+  border-radius: 12px;
+  border-left: 4px solid var(--primary-color) !important;
+  color: var(--text-main);
+}
+
+/* Chunk Code Block */
+.chunk-pre-box {
+  background-color: var(--bg-surface-1) !important;
+  border: 1px solid var(--card-border) !important;
+  color: var(--text-main) !important;
+  border-radius: 10px;
+}

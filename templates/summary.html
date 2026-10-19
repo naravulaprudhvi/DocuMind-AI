@@ -1,85 +1,127 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+
+<!-- Header & Navigation Bar -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
   <div>
     <div class="d-flex align-items-center gap-2 mb-2">
-      <a href="{{ url_for('documents.library') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
-        <i class="bi bi-arrow-left"></i> Back to Knowledge Base
+      <a href="{{ url_for('documents.library') }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 px-3 py-1.5 rounded-3">
+        <i class="bi bi-arrow-left"></i> Knowledge Base
       </a>
-      <a href="{{ url_for('chat.chat') }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">
-        <i class="bi bi-chat-dots"></i> Back to Chat
+      <a href="{{ url_for('chat.chat') }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1 px-3 py-1.5 rounded-3">
+        <i class="bi bi-chat-dots"></i> Chat Studio
       </a>
     </div>
-    <h4 class="fw-bold mb-1">{{ doc.filename }}</h4>
-    <p class="text-muted small mb-0">AI Executive Briefing & Key Insights</p>
+    <h4 class="fw-bold mb-1 text-main d-flex align-items-center gap-2">
+      <i class="bi bi-file-earmark-text text-primary"></i>
+      <span>{{ doc.filename }}</span>
+    </h4>
+    <p class="text-muted small mb-0">AI Executive Briefing & Semantic Insights</p>
   </div>
-  <div class="d-flex gap-2 mt-2 mt-md-0">
-    <a href="{{ url_for('documents.view_document', doc_id=doc.document_id) }}" target="_blank" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
+  
+  <div class="d-flex align-items-center gap-2">
+    <a href="{{ url_for('documents.view_document', doc_id=doc.document_id) }}" target="_blank" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 px-3 py-2 rounded-3">
       <i class="bi bi-eye"></i> View Original
     </a>
-    <a href="{{ url_for('documents.view_chunks', doc_id=doc.document_id) }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">
-      <i class="bi bi-layers"></i> View Chunks
+    <a href="{{ url_for('documents.view_chunks', doc_id=doc.document_id) }}" class="btn btn-outline-info btn-sm d-inline-flex align-items-center gap-1 px-3 py-2 rounded-3">
+      <i class="bi bi-layers"></i> Chunks
     </a>
-    <a href="{{ url_for('chat.chat') }}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
-      <i class="bi bi-chat-dots"></i> Query in Chat
+    <a href="{{ url_for('chat.chat') }}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1 px-3.5 py-2 rounded-pill shadow-sm">
+      <i class="bi bi-chat-dots-fill"></i> Query in Chat
     </a>
   </div>
 </div>
 
-<!-- Metrics Cards -->
+<!-- Telemetry Metrics Row (Profile Settings Style) -->
 <div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
-    <div class="card p-3 shadow-sm border card-theme">
-      <div class="text-muted small fw-medium mb-1">Word Count</div>
-      <div class="h4 mb-0 fw-bold text-primary">{{ summary.word_count }}</div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="telemetry-stat-card">
+      <div class="studio-badge-icon flex-shrink-0 badge-indigo">
+        <i class="bi bi-fonts"></i>
+      </div>
+      <div>
+        <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.68rem; letter-spacing: 0.5px;">Word Count</div>
+        <div class="h4 fw-bold mb-0 text-main">{{ summary.word_count }}</div>
+        <div class="text-secondary small" style="font-size: 0.72rem;">Extracted Words</div>
+      </div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="card p-3 shadow-sm border card-theme">
-      <div class="text-muted small fw-medium mb-1">Character Count</div>
-      <div class="h4 mb-0 fw-bold text-primary">{{ summary.char_count }}</div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="telemetry-stat-card">
+      <div class="studio-badge-icon flex-shrink-0 badge-cyan">
+        <i class="bi bi-hash"></i>
+      </div>
+      <div>
+        <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.68rem; letter-spacing: 0.5px;">Character Count</div>
+        <div class="h4 fw-bold mb-0 text-main">{{ summary.char_count }}</div>
+        <div class="text-secondary small" style="font-size: 0.72rem;">Total Characters</div>
+      </div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="card p-3 shadow-sm border-0">
-      <div class="text-muted small fw-medium mb-1">Total Chunks</div>
-      <div class="h4 mb-0 fw-bold text-primary">{{ summary.chunk_count }}</div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="telemetry-stat-card">
+      <div class="studio-badge-icon flex-shrink-0 badge-emerald">
+        <i class="bi bi-layers"></i>
+      </div>
+      <div>
+        <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.68rem; letter-spacing: 0.5px;">FAISS Chunks</div>
+        <div class="h4 fw-bold mb-0 text-success">{{ summary.chunk_count }}</div>
+        <div class="text-secondary small" style="font-size: 0.72rem;">Vector Segments</div>
+      </div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="card p-3 shadow-sm border-0">
-      <div class="text-muted small fw-medium mb-1">Est. Read Time</div>
-      <div class="h4 mb-0 fw-bold text-primary">~{{ summary.estimated_read_time_min }} min</div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="telemetry-stat-card">
+      <div class="studio-badge-icon flex-shrink-0 badge-violet">
+        <i class="bi bi-stopwatch"></i>
+      </div>
+      <div>
+        <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.68rem; letter-spacing: 0.5px;">Est. Read Time</div>
+        <div class="h4 fw-bold mb-0 text-main">~{{ summary.estimated_read_time_min }} min</div>
+        <div class="text-secondary small" style="font-size: 0.72rem;">Standard Reading Speed</div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Executive Summary -->
-<div class="card shadow-sm border-0 p-4 mb-4">
-  <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
-    <i class="bi bi-journal-text text-primary"></i> Executive Overview
-  </h6>
-  <div class="p-4 summary-overview-box rounded lh-lg font-sans" style="font-size: 1rem; border-left: 4px solid var(--primary-color);">
+<!-- Executive Overview Card -->
+<div class="card card-elevated p-4 mb-4 position-relative overflow-hidden">
+  <div class="position-absolute top-0 start-0 w-100" style="height: 3px; background: var(--primary-gradient);"></div>
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <div class="studio-badge-icon flex-shrink-0 badge-indigo" style="width: 36px; height: 36px; font-size: 1.1rem; border-radius: 10px;">
+      <i class="bi bi-journal-text"></i>
+    </div>
+    <h5 class="fw-bold mb-0 text-main">Executive Overview</h5>
+  </div>
+  <div class="summary-overview-box p-4 lh-lg" style="font-size: 1.02rem; line-height: 1.8;">
     {{ summary.overview }}
   </div>
 </div>
 
-<!-- Key Highlights & Takeaways -->
-<div class="card shadow-sm border-0 p-4 mb-4">
-  <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
-    <i class="bi bi-check2-circle text-success"></i> Key Highlights & Takeaways
-  </h6>
+<!-- Key Highlights & Takeaways Card -->
+<div class="card card-elevated p-4 mb-4 position-relative overflow-hidden">
+  <div class="position-absolute top-0 start-0 w-100" style="height: 3px; background: var(--accent-gradient);"></div>
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <div class="studio-badge-icon flex-shrink-0 badge-emerald" style="width: 36px; height: 36px; font-size: 1.1rem; border-radius: 10px;">
+      <i class="bi bi-check2-circle"></i>
+    </div>
+    <h5 class="fw-bold mb-0 text-main">Key Highlights & Action Items</h5>
+  </div>
+
   {% if summary.takeaways %}
-    <ul class="list-group list-group-flush">
+    <div class="vstack gap-2.5">
       {% for t in summary.takeaways %}
-        <li class="list-group-item px-0 py-3 d-flex align-items-start gap-3">
-          <div class="p-1 bg-primary bg-opacity-10 text-primary rounded-circle flex-shrink-0 mt-1">
-            <i class="bi bi-check2 fs-6"></i>
+        <div class="d-flex align-items-start gap-3 p-3 rounded-3" style="background: var(--bg-surface-1); border: 1px solid var(--card-border-subtle);">
+          <div class="studio-badge-icon flex-shrink-0 badge-emerald mt-0.5" style="width: 28px; height: 28px; font-size: 0.95rem; border-radius: 8px;">
+            <i class="bi bi-check2"></i>
           </div>
-          <span class="lh-base text-body">{{ t }}</span>
-        </li>
+          <div class="text-main lh-base" style="font-size: 0.95rem;">{{ t }}</div>
+        </div>
       {% endfor %}
-    </ul>
+    </div>
   {% else %}
     <p class="text-muted mb-0">No specific highlight points extracted.</p>
   {% endif %}

@@ -608,6 +608,42 @@
     return md;
   }
 
+  // Developer-grade syntax code blocks enhancer with copy button
+  function enhanceCodeBlocks(container) {
+    if (!container) return;
+    const pres = container.querySelectorAll('pre');
+    pres.forEach(pre => {
+      if (pre.parentElement && pre.parentElement.classList.contains('code-block-wrapper')) return;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'code-block-wrapper shadow-sm';
+      
+      const header = document.createElement('div');
+      header.className = 'code-block-header';
+      header.innerHTML = `
+        <span class="d-flex align-items-center gap-1.5"><i class="bi bi-code-slash text-primary"></i> <span>Code Snippet</span></span>
+        <button type="button" class="code-copy-btn d-inline-flex align-items-center gap-1" onclick="copySnippet(this)">
+          <i class="bi bi-clipboard"></i> <span>Copy</span>
+        </button>
+      `;
+      
+      pre.parentNode.insertBefore(wrapper, pre);
+      wrapper.appendChild(header);
+      wrapper.appendChild(pre);
+    });
+  }
+
+  function copySnippet(btn) {
+    const wrapper = btn.closest('.code-block-wrapper');
+    if (!wrapper) return;
+    const pre = wrapper.querySelector('pre');
+    if (!pre) return;
+    navigator.clipboard.writeText(pre.innerText).then(() => {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '<i class="bi bi-check2 text-success"></i> <span>Copied!</span>';
+      setTimeout(() => { btn.innerHTML = orig; }, 1800);
+    });
+  }
+
   // State for active conversation and inserted documents
   const chatMeta = document.getElementById('chat-metadata');
   let activeConvId = chatMeta && chatMeta.dataset.convId ? parseInt(chatMeta.dataset.convId, 10) : null;
@@ -1136,7 +1172,7 @@
             <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 36px; height: 36px; font-size: 0.85rem;">
               <i class="bi bi-robot"></i>
             </div>
-            <div class="card bg-white p-3 border shadow-sm" style="max-width: 85%; border-radius: 18px 18px 18px 4px;">
+            <div class="card assistant-msg-bubble p-3 border shadow-sm" style="max-width: 86%; border-radius: 18px 18px 18px 4px;">
               <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
                 <span class="fw-semibold small text-primary d-flex align-items-center gap-1">
                   <i class="bi bi-stars"></i> DocuMind AI
@@ -1159,6 +1195,7 @@
           if (msgs && indicator) {
             msgs.insertBefore(assistantBubble, indicator);
           }
+          enhanceCodeBlocks(assistantBubble);
 
           // If this was a fresh unsaved chat, save it to history UI and update active conversation ID
           if ((!activeConvId || activeConvId !== data.conv_id) && data.conv_id) {
@@ -1244,7 +1281,7 @@
             <div class="rounded-circle bg-danger text-white d-flex align-items-center justify-content-center" style="width: 34px; height: 34px; font-size: 0.85rem;">
               <i class="bi bi-exclamation-triangle-fill"></i>
             </div>
-            <div class="card bg-white p-3 border border-danger text-danger shadow-sm small" style="max-width: 85%; border-radius: 18px 18px 18px 4px;">
+            <div class="card assistant-msg-bubble p-3 border border-danger text-danger shadow-sm small" style="max-width: 86%; border-radius: 18px 18px 18px 4px;">
               Failed to send message: ${escapeHtml(err.message || 'Network error')}. Please try again.
             </div>
           `;
@@ -1558,6 +1595,7 @@
       if (raw) {
         el.setAttribute('data-raw', raw);
         el.innerHTML = renderMarkdown(raw);
+        enhanceCodeBlocks(el);
       }
     });
 
