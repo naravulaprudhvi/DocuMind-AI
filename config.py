@@ -20,7 +20,7 @@ def sanitize_database_url(url: str) -> str:
     """Auto-sanitizes database URLs, encoding special characters in passwords and adding SSL for Supabase/Neon."""
     if not url:
         return url
-    url = url.strip()
+    url = url.strip().strip("'\"").strip()
     import re
     from urllib.parse import quote
     # Matches: postgresql://username:password@hostname:port/dbname
@@ -49,7 +49,21 @@ class Config:
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50 MB upload limit
 
     # Database configuration (Cloud DATABASE_URL, SQLite fallback, or MySQL)
-    DATABASE_URL = os.getenv("DATABASE_URL")
+    # Check DATABASE_URL and common provider aliases
+    DATABASE_URL = (
+        os.getenv("DATABASE_URL")
+        or os.getenv("SUPABASE_DATABASE_URL")
+        or os.getenv("POSTGRES_URL")
+        or os.getenv("POSTGRESQL_URL")
+        or os.getenv("SUPABASE_DB_URL")
+    )
+    # Also check if user inadvertently pasted postgres connection into SUPABASE_URL
+    if not DATABASE_URL and os.getenv("SUPABASE_URL", "").strip().startswith("postgres"):
+        DATABASE_URL = os.getenv("SUPABASE_URL")
+
+    if DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.strip().strip("'\"").strip()
+
     IS_CLOUD = bool(
         os.getenv("RENDER")
         or os.getenv("RENDER_SERVICE_ID")
@@ -64,20 +78,15 @@ class Config:
     is_localhost = db_host.lower() in ("localhost", "127.0.0.1", "0.0.0.0", "::1", "")
 
     # On cloud platforms (Render, Railway, etc.), if no remote DATABASE_URL is set and DB_HOST is localhost,
-    # we MUST use SQLite because localhost has no MySQL server running inside the cloud container.
+    # we use SQLite because localhost has no MySQL server running inside the cloud container.
     USE_SQLITE = (
         os.getenv("USE_SQLITE", "false").lower() in ("true", "1")
         or (IS_CLOUD and not DATABASE_URL and is_localhost)
     )
 
-    if USE_SQLITE:
-        SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(BASE_DIR, 'documind.db')}"
-        SQLALCHEMY_ENGINE_OPTIONS = {
-            "pool_pre_ping": True,
-            "connect_args": {"timeout": 15},
-        }
-    elif DATABASE_URL:
-        raw_url = sanitize_database_url(DATABASE_URL.strip())
+    # 1. PRIMARY: External Cloud Database (Supabase, Neon, etc.) - ALWAYS takes precedence
+    if DATABASE_URL:
+        raw_url = sanitize_database_url(DATABASE_URL)
         if raw_url.startswith("postgres://"):
             SQLALCHEMY_DATABASE_URI = raw_url.replace("postgres://", "postgresql+psycopg2://", 1)
         elif raw_url.startswith("postgresql://") and "+psycopg2" not in raw_url:
@@ -105,6 +114,13 @@ class Config:
             "pool_recycle": 300,
             "pool_pre_ping": True,
             "connect_args": connect_args,
+        }
+    # 2. SECONDARY: Local or Cloud fallback SQLite
+    elif USE_SQLITE:
+        SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(BASE_DIR, 'documind.db')}"
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "pool_pre_ping": True,
+            "connect_args": {"timeout": 15},
         }
     else:
         DB_PORT = os.getenv("DB_PORT", "3306")
