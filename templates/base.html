@@ -33,9 +33,9 @@
   <div class="mesh-orb mesh-orb-3"></div>
 </div>
 
-<header class="app-header-wrapper sticky-top">
-  <nav class="navbar navbar-expand-lg navbar-custom floating-island-navbar" id="main-navbar">
-    <div class="container-fluid px-3 px-xl-4">
+<header class="app-header-bar">
+  <nav class="navbar navbar-expand-lg navbar-custom" id="main-navbar">
+    <div class="container-fluid px-3 px-lg-4">
     <!-- Brand Logo & Identity -->
     <a class="navbar-brand d-flex align-items-center gap-2 me-3" href="{{ url_for('dashboard') }}">
       <span class="brand-badge-icon">
@@ -125,11 +125,13 @@
         </div>
 
         {% if g.user %}
-          <!-- Quick Action: New Chat -->
-          <a href="{{ url_for('chat.chat') }}" class="btn btn-sm btn-nav-action d-none d-sm-inline-flex align-items-center gap-1" title="Start a fresh conversation thread">
-            <i class="bi bi-plus-lg"></i>
-            <span>New Chat</span>
-          </a>
+          <!-- Quick Action: New Chat (shown on library/profile pages) -->
+          {% if request.endpoint not in ['chat.chat', 'dashboard'] %}
+            <a href="{{ url_for('chat.chat') }}" class="btn btn-sm btn-nav-action d-none d-sm-inline-flex align-items-center gap-1" title="Start a fresh conversation thread">
+              <i class="bi bi-plus-lg"></i>
+              <span>New Chat</span>
+            </a>
+          {% endif %}
 
           <!-- User Profile & Account Dropdown -->
           <div class="dropdown">
@@ -208,7 +210,8 @@
   </div>
 {% endif %}
 
-<div class="{% block container_class %}container py-3 py-md-4{% endblock %}">
+{% block main_container %}
+<main class="{% block container_class %}container py-3 py-md-4{% endblock %}">
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% for category, message in messages %}
       <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show shadow-sm border-0 rounded-3 mb-4" role="alert">
@@ -218,7 +221,8 @@
     {% endfor %}
   {% endwith %}
   {% block content %}{% endblock %}
-</div>
+</main>
+{% endblock %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
