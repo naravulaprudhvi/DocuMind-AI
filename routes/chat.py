@@ -152,191 +152,203 @@ def new_chat():
 @chat_bp.route("/chat/<int:conv_id>/send", methods=["POST"])
 @login_required
 def send_message(conv_id: int | None = None):
+    is_json = request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest"
     user_id = session.get("user_id")
 
-    # If this is a fresh conversation, create it now that the user sent their first message
-    if not conv_id:
-        conv: Any = Conversation(user_id=user_id, title="New chat")
-        db.session.add(conv)
-        db.session.commit()
-    else:
-        conv = Conversation.query.filter_by(
-            conversation_id=conv_id, user_id=user_id
-        ).first_or_404()
+    try:
+        # If this is a fresh conversation, create it now that the user sent their first message
+        if not conv_id:
+            conv: Any = Conversation(user_id=user_id, title="New chat")
+            db.session.add(conv)
+            db.session.commit()
+        else:
+            conv = Conversation.query.filter_by(
+                conversation_id=conv_id, user_id=user_id
+            ).first_or_404()
 
-    is_json = request.is_json
-    has_explicit_doc_selection = False
-    doc_ids: list[int] = []
+        has_explicit_doc_selection = False
+        doc_ids: list[int] = []
 
-    if is_json:
-        data = request.get_json() or {}
-        question = data.get("question", "").strip()
-        has_explicit_doc_selection = "doc_ids" in data or "document_ids" in data or "doc_id" in data
-        raw_ids = data.get("doc_ids")
-        if raw_ids is None and data.get("document_ids") is not None:
-            raw_ids = data.get("document_ids")
-        if not raw_ids and data.get("doc_id"):
-            val = data.get("doc_id")
-            raw_ids = val if isinstance(val, list) else [val]
-        for d in (raw_ids or []):
-            try:
-                doc_ids.append(int(d))
-            except (ValueError, TypeError):
-                pass
-    else:
-        question = request.form.get("question", "").strip()
-        has_explicit_doc_selection = "doc_ids" in request.form or "document_ids" in request.form or "doc_id" in request.form
-        raw_ids = request.form.getlist("doc_ids", type=int) or request.form.getlist("document_ids", type=int)
-        if not raw_ids and request.form.get("doc_id"):
-            for part in str(request.form.get("doc_id")).split(","):
+        if request.is_json:
+            data = request.get_json() or {}
+            question = data.get("question", "").strip()
+            has_explicit_doc_selection = "doc_ids" in data or "document_ids" in data or "doc_id" in data
+            raw_ids = data.get("doc_ids")
+            if raw_ids is None and data.get("document_ids") is not None:
+                raw_ids = data.get("document_ids")
+            if not raw_ids and data.get("doc_id"):
+                val = data.get("doc_id")
+                raw_ids = val if isinstance(val, list) else [val]
+            for d in (raw_ids or []):
                 try:
-                    if part.strip():
-                        raw_ids.append(int(part.strip()))
+                    doc_ids.append(int(d))
                 except (ValueError, TypeError):
                     pass
-        doc_ids = raw_ids
+        else:
+            data = {}
+            question = request.form.get("question", "").strip()
+            has_explicit_doc_selection = "doc_ids" in request.form or "document_ids" in request.form or "doc_id" in request.form
+            raw_ids = request.form.getlist("doc_ids", type=int) or request.form.getlist("document_ids", type=int)
+            if not raw_ids and request.form.get("doc_id"):
+                for part in str(request.form.get("doc_id")).split(","):
+                    try:
+                        if part.strip():
+                            raw_ids.append(int(part.strip()))
+                    except (ValueError, TypeError):
+                        pass
+            doc_ids = raw_ids
 
-    # Conversation Document Memory & Explicit Selection:
-    # If the user attaches/passes document(s), save them to this conversation.
-    # If the user explicitly has no documents attached in a new chat or sends clear_docs, keep doc_ids empty.
-    # Otherwise, if the conversation has previously attached documents, retain them.
-    if doc_ids:
-        conv.set_attached_doc_ids(doc_ids)
-        db.session.commit()
-    elif is_json and (data.get("clear_docs") or (has_explicit_doc_selection and not conv.get_attached_doc_ids())):
-        # Explicit general chat without documents
-        conv.set_attached_doc_ids([])
-        db.session.commit()
-        doc_ids = []
-    else:
-        conv_attached = conv.get_attached_doc_ids()
-        if conv_attached:
-            doc_ids = conv_attached
+        # Conversation Document Memory & Explicit Selection:
+        if doc_ids:
+            conv.set_attached_doc_ids(doc_ids)
+            db.session.commit()
+        elif is_json and (data.get("clear_docs") or (has_explicit_doc_selection and not conv.get_attached_doc_ids())):
+            # Explicit general chat without documents
+            conv.set_attached_doc_ids([])
+            db.session.commit()
+            doc_ids = []
+        else:
+            conv_attached = conv.get_attached_doc_ids()
+            if conv_attached:
+                doc_ids = conv_attached
 
-    if not question:
+        if not question:
+            if is_json:
+                return jsonify({"success": False, "error": "Question cannot be empty"}), 400
+            flash("Please enter a question.", "warning")
+            return redirect(url_for("chat.chat", c=conv_id))
+
+        # Auto-title conversation if still default
+        if conv.title in ("New Conversation", "New chat"):
+            conv.title = (question[:32] + "...") if len(question) > 35 else question
+
+        # 1. Immediately save User message so it is guaranteed to precede the assistant answer
+        user_msg: Any = Message(
+            conversation_id=conv.conversation_id,
+            role="user",
+            content=question,
+        )
+        db.session.add(user_msg)
+        db.session.commit()
+
+        cache_key = generate_query_cache_key(user_id, question, doc_ids if doc_ids else None)
+        cached_entry = query_response_cache.get(cache_key)
+
+        if cached_entry:
+            answer, chunks = cached_entry
+        else:
+            # 2. Adaptive Document Retrieval:
+            chunks = []
+            import re
+            is_simple_greeting = bool(re.match(r"^(hi|hello|hey|good\s+(morning|afternoon|evening)|howdy|greetings)[\s!.,?]*$", question, re.I))
+
+            if doc_ids and not is_simple_greeting:
+                chunks = retrieve_relevant_chunks(
+                    user_id=user_id,
+                    query=question,
+                    document_ids=doc_ids,
+                    top_k=5,
+                    min_score=0.20,
+                )
+            elif not has_explicit_doc_selection and not is_simple_greeting:
+                chunks = retrieve_relevant_chunks(
+                    user_id=user_id,
+                    query=question,
+                    document_ids=None,
+                    top_k=5,
+                    min_score=0.20,
+                )
+
+            # 3. Fetch past conversation turns for memory context (exclude current user_msg)
+            recent_msgs = (
+                Message.query.filter(
+                    Message.conversation_id == conv.conversation_id,
+                    Message.message_id != user_msg.message_id,
+                )
+                .order_by(Message.created_at.desc(), Message.message_id.desc())
+                .limit(6)
+                .all()
+            )
+            chat_history = [
+                {"role": m.role, "content": m.content}
+                for m in reversed(recent_msgs)
+            ]
+
+            # Privacy Guard: Redact sensitive PII if user privacy shield is active
+            from services.security_service import detect_prompt_injection, log_security_event, redact_pii
+            if detect_prompt_injection(question):
+                log_security_event("PROMPT_INJECTION_DEFUSED", user_id, {"preview": question[:60]})
+
+            processed_chunks = chunks
+            if session.get("pref_pii_masking", True):
+                processed_chunks = []
+                for c in chunks:
+                    sanitized_text, _ = redact_pii(c.get("text", ""))
+                    c_copy = dict(c)
+                    c_copy["text"] = sanitized_text
+                    processed_chunks.append(c_copy)
+
+            # 4. Generate answer using RAG LLM engine
+            answer = generate_rag_response(question, processed_chunks, chat_history)
+
+            # Cache answer for repeated queries
+            query_response_cache.set(cache_key, (answer, chunks))
+
+        # 5. Save Assistant Message
+        assistant_msg: Any = Message(
+            conversation_id=conv.conversation_id,
+            role="assistant",
+            content=answer,
+        )
+        db.session.add(assistant_msg)
+        db.session.flush()
+
+        sources_data = []
+        for c in chunks:
+            src: Any = MessageSource(
+                message_id=assistant_msg.message_id,
+                chunk_id=c["chunk_id"],
+                relevance_score=c["similarity_score"],
+            )
+            db.session.add(src)
+            sources_data.append({
+                "doc_name": c["document_name"],
+                "document_id": c["document_id"],
+                "page_number": c["page_number"],
+                "chunk_id": c["chunk_id"],
+                "score": c["similarity_score"],
+                "snippet": c["text"][:180] + "...",
+            })
+
+        db.session.commit()
+
         if is_json:
-            return jsonify({"error": "Question cannot be empty"}), 400
-        flash("Please enter a question.", "warning")
-        return redirect(url_for("chat.chat", c=conv_id))
+            attached_list = []
+            if doc_ids:
+                for d in Document.query.filter(Document.document_id.in_(doc_ids)).all():
+                    attached_list.append({"id": d.document_id, "name": d.filename})
+            return jsonify({
+                "success": True,
+                "answer": answer,
+                "sources": sources_data,
+                "conv_id": conv.conversation_id,
+                "attached_docs": attached_list,
+            })
 
-    # Auto-title conversation if still default
-    if conv.title in ("New Conversation", "New chat"):
-        conv.title = (question[:32] + "...") if len(question) > 35 else question
+        return redirect(url_for("chat.chat", c=conv.conversation_id))
 
-    # 1. Immediately save User message so it is guaranteed to precede the assistant answer
-    user_msg: Any = Message(
-        conversation_id=conv.conversation_id,
-        role="user",
-        content=question,
-    )
-    db.session.add(user_msg)
-    db.session.commit()
-
-    cache_key = generate_query_cache_key(user_id, question, doc_ids if doc_ids else None)
-    cached_entry = query_response_cache.get(cache_key)
-
-    if cached_entry:
-        answer, chunks = cached_entry
-    else:
-        # 2. Adaptive Document Retrieval:
-        # When doc_ids is present, retrieve with gentle threshold and include overview chunks
-        # if the query is an overview or broad question.
-        chunks = []
-        if doc_ids:
-            chunks = retrieve_relevant_chunks(
-                user_id=user_id,
-                query=question,
-                document_ids=doc_ids,
-                top_k=5,
-                min_score=0.20,
-            )
-        elif not has_explicit_doc_selection:
-            # Fallback for automated tests where doc_ids was omitted
-            chunks = retrieve_relevant_chunks(
-                user_id=user_id,
-                query=question,
-                document_ids=None,
-                top_k=5,
-                min_score=0.20,
-            )
-
-        # 3. Fetch past conversation turns for memory context (exclude current user_msg)
-        recent_msgs = (
-            Message.query.filter(
-                Message.conversation_id == conv.conversation_id,
-                Message.message_id != user_msg.message_id,
-            )
-            .order_by(Message.created_at.desc(), Message.message_id.desc())
-            .limit(6)
-            .all()
-        )
-        chat_history = [
-            {"role": m.role, "content": m.content}
-            for m in reversed(recent_msgs)
-        ]
-
-        # Privacy Guard: Redact sensitive PII if user privacy shield is active
-        from services.security_service import detect_prompt_injection, log_security_event, redact_pii
-        if detect_prompt_injection(question):
-            log_security_event("PROMPT_INJECTION_DEFUSED", user_id, {"preview": question[:60]})
-
-        processed_chunks = chunks
-        if session.get("pref_pii_masking", True):
-            processed_chunks = []
-            for c in chunks:
-                sanitized_text, _ = redact_pii(c.get("text", ""))
-                c_copy = dict(c)
-                c_copy["text"] = sanitized_text
-                processed_chunks.append(c_copy)
-
-        # 4. Generate answer using RAG LLM engine
-        answer = generate_rag_response(question, processed_chunks, chat_history)
-
-        # Cache answer for repeated queries
-        query_response_cache.set(cache_key, (answer, chunks))
-
-    # 5. Save Assistant Message
-    assistant_msg: Any = Message(
-        conversation_id=conv.conversation_id,
-        role="assistant",
-        content=answer,
-    )
-    db.session.add(assistant_msg)
-    db.session.flush()
-
-    sources_data = []
-    for c in chunks:
-        src: Any = MessageSource(
-            message_id=assistant_msg.message_id,
-            chunk_id=c["chunk_id"],
-            relevance_score=c["similarity_score"],
-        )
-        db.session.add(src)
-        sources_data.append({
-            "doc_name": c["document_name"],
-            "document_id": c["document_id"],
-            "page_number": c["page_number"],
-            "chunk_id": c["chunk_id"],
-            "score": c["similarity_score"],
-            "snippet": c["text"][:180] + "...",
-        })
-
-    db.session.commit()
-
-    if is_json:
-        attached_list = []
-        if doc_ids:
-            for d in Document.query.filter(Document.document_id.in_(doc_ids)).all():
-                attached_list.append({"id": d.document_id, "name": d.filename})
-        return jsonify({
-            "success": True,
-            "answer": answer,
-            "sources": sources_data,
-            "conv_id": conv.conversation_id,
-            "attached_docs": attached_list,
-        })
-
-    return redirect(url_for("chat.chat", c=conv.conversation_id))
+    except Exception as e:
+        import logging
+        import traceback
+        logging.error(f"Error processing chat message: {e}\n{traceback.format_exc()}")
+        db.session.rollback()
+        if is_json:
+            return jsonify({
+                "success": False,
+                "error": f"Failed to send message: {str(e)}",
+            }), 500
+        flash(f"Failed to send message: {str(e)}", "danger")
+        return redirect(url_for("chat.chat", c=conv_id) if conv_id else url_for("chat.chat"))
 
 
 @chat_bp.route("/chat/<int:conv_id>/delete", methods=["POST"])

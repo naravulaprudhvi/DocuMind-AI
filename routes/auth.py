@@ -5,6 +5,7 @@ from flask import (
     Blueprint,
     flash,
     g,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -27,6 +28,12 @@ def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if g.user is None:
+            if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.path.startswith("/api/"):
+                return jsonify({
+                    "success": False,
+                    "error": "Your session has expired. Please refresh the page and log in again.",
+                    "redirect": url_for("auth.login"),
+                }), 401
             flash("Please log in first.", "warning")
             return redirect(url_for("auth.login"))
         return view(*args, **kwargs)

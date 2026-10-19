@@ -324,9 +324,9 @@
           <span class="text-muted">Uploading & Indexing...</span>
         </div>
 
-        <form id="chat-form" method="post" action="{% if active_conv %}{{ url_for('chat.send_message', conv_id=active_conv.conversation_id) }}{% else %}{{ url_for('chat.send_message') }}{% endif %}" class="w-100">
+        <form id="chat-form" method="post" action="{% if active_conv %}/chat/{{ active_conv.conversation_id }}/send{% else %}/chat/send{% endif %}" class="w-100">
           <!-- Hidden file input for in-chat upload -->
-          <input type="file" id="chat-file-input" style="display:none;" accept=".pdf,.docx,.doc">
+          <input type="file" id="chat-file-input" style="display:none;" accept=".pdf,.docx,.doc,.txt,.md">
           
           <div class="chat-capsule-bar">
             <!-- + Attach / Upload Button -->
@@ -680,6 +680,21 @@
           'X-Requested-With': 'XMLHttpRequest'
         }
       });
+      if (!response.ok) {
+        let errMsg = `Upload failed (${response.status})`;
+        try {
+          const errData = await response.json();
+          if (errData && (errData.error || errData.message)) {
+            errMsg = errData.error || errData.message;
+          }
+        } catch (_) {
+          if (response.status === 401) {
+            errMsg = "Your session has expired. Please refresh the page and log in.";
+          }
+        }
+        alert(errMsg);
+        return;
+      }
       const data = await response.json();
       if (data.success) {
         insertDocumentToChat(data.document_id, data.filename);
@@ -928,6 +943,21 @@
           },
           body: JSON.stringify(payload)
         });
+
+        if (!response.ok) {
+          let errorMsg = `Server error (${response.status})`;
+          try {
+            const errData = await response.json();
+            if (errData && errData.error) errorMsg = errData.error;
+          } catch (_) {
+            if (response.status === 401) {
+              errorMsg = "Your session has expired. Please refresh the page and log in.";
+            } else if (response.status === 504 || response.status === 502) {
+              errorMsg = "Server took too long to respond. Please try again.";
+            }
+          }
+          throw new Error(errorMsg);
+        }
 
         const data = await response.json();
         if (data.success) {

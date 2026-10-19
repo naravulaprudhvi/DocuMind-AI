@@ -49,9 +49,30 @@ def create_app():
         )
         return response
 
+    # Trust proxy headers (HTTPS, client IP, host) behind Render/Cloud reverse proxies
+    try:
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+    except Exception:
+        pass
+
     with app.app_context():
         try:
-            db.create_all()  # creates the 8 tables if they do not exist
+            db.create_all()  # creates tables if they do not exist
+            # SQLite performance tuning and auto-migration
+            engine = db.engine
+            if "sqlite" in str(engine.url):
+                with engine.connect() as conn:
+                    conn.execute(db.text("PRAGMA journal_mode=WAL;"))
+                    conn.execute(db.text("PRAGMA synchronous=NORMAL;"))
+                    conn.execute(db.text("PRAGMA busy_timeout=15000;"))
+                    try:
+                        cols = [r[1] for r in conn.execute(db.text("PRAGMA table_info(conversations);")).fetchall()]
+                        if cols and "attached_doc_ids" not in cols:
+                            conn.execute(db.text("ALTER TABLE conversations ADD COLUMN attached_doc_ids VARCHAR(255) DEFAULT '';"))
+                            conn.commit()
+                    except Exception:
+                        pass
         except Exception as e:
             import logging
             logging.error(f"Database initialization warning: {e}")
@@ -63,8 +84,11 @@ def create_app():
                     db.create_all()
                 except Exception as fallback_err:
                     logging.error(f"Fallback database error: {fallback_err}")
-        from services.embedding_service import warmup_embedding_model_async
-        warmup_embedding_model_async()
+
+        # On cloud instances (e.g. Render 512MB RAM), lazy-load embeddings to prevent boot starvation
+        if not getattr(Config, "IS_CLOUD", False):
+            from services.embedding_service import warmup_embedding_model_async
+            warmup_embedding_model_async()
     return app
 
 

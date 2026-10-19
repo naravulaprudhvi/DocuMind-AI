@@ -20,9 +20,9 @@ def call_gemini_api(system_instruction: str, user_prompt: str, api_key: str) -> 
     global _working_gemini_model
     candidate_models = [
         "gemini-3.5-flash-lite",
-        "gemini-flash-lite-latest",
-        "gemini-3.5-flash",
+        "gemini-2.5-flash",
         "gemini-flash-latest",
+        "gemini-flash-lite-latest",
     ]
     models_to_try = [_working_gemini_model] + [m for m in candidate_models if m != _working_gemini_model]
 
@@ -51,7 +51,7 @@ def call_gemini_api(system_instruction: str, user_prompt: str, api_key: str) -> 
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=12) as response:
+            with urllib.request.urlopen(req, timeout=8) as response:
                 if response.status == 200:
                     data = json.loads(response.read().decode("utf-8"))
                     candidates = data.get("candidates", [])
@@ -65,7 +65,10 @@ def call_gemini_api(system_instruction: str, user_prompt: str, api_key: str) -> 
                         if text_parts:
                             _working_gemini_model = model_name
                             return "".join(text_parts).strip()
-        except urllib.error.HTTPError:
+        except urllib.error.HTTPError as e:
+            # If API key is invalid or quota is exceeded, do not waste 30s retrying other models
+            if e.code in (400, 401, 403, 429):
+                break
             continue
         except Exception:  # noqa: BLE001, S112
             continue

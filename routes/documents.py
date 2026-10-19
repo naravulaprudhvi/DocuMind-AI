@@ -38,71 +38,95 @@ def library():
     user_id = session.get("user_id")
 
     if request.method == "POST":
-        file = request.files.get("pdf") or request.files.get("document") or request.files.get("file")
-        if not file or file.filename == "":
-            flash("Please choose a file to upload.", "danger")
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json
+        try:
+            file = request.files.get("pdf") or request.files.get("document") or request.files.get("file")
+            if not file or file.filename == "":
+                if is_ajax:
+                    return jsonify({"success": False, "error": "Please choose a file to upload."}), 400
+                flash("Please choose a file to upload.", "danger")
+                return redirect(url_for("documents.library"))
+
+            allowed_extensions = {".pdf", ".docx", ".doc"}
+            ext = os.path.splitext(file.filename.lower())[1]
+            if ext not in allowed_extensions:
+                err_msg = "Only PDF files are allowed (PDF and Word DOC/DOCX supported)."
+                if is_ajax:
+                    return jsonify({"success": False, "error": err_msg}), 400
+                flash(err_msg, "danger")
+                return redirect(url_for("documents.library"))
+
+            # Magic bytes verification for binary formats
+            header = file.stream.read(8)
+            file.stream.seek(0)
+            if ext == ".pdf" and not header.startswith(b"%PDF-"):
+                err_msg = "File verification failed: Content does not match valid PDF file structure."
+                if is_ajax:
+                    return jsonify({"success": False, "error": err_msg}), 400
+                flash(err_msg, "danger")
+                return redirect(url_for("documents.library"))
+            if ext == ".docx" and not header.startswith(b"PK\x03\x04"):
+                err_msg = "File verification failed: Content does not match valid DOCX file structure."
+                if is_ajax:
+                    return jsonify({"success": False, "error": err_msg}), 400
+                flash(err_msg, "danger")
+                return redirect(url_for("documents.library"))
+
+            original = secure_filename(os.path.basename(file.filename))
+            stored = f"{uuid.uuid4().hex}_{original}"
+            from services.security_service import (
+                compute_file_sha256,
+                get_secure_user_upload_dir,
+                log_security_event,
+            )
+            user_dir = get_secure_user_upload_dir(current_app.config["UPLOAD_FOLDER"], user_id)
+            path = os.path.join(user_dir, stored)
+            file.save(path)
+            sha_checksum = compute_file_sha256(path)
+            log_security_event("DOCUMENT_UPLOADED", user_id, {"filename": original, "sha256": sha_checksum})
+
+            new_doc: Any = Document(
+                user_id=user_id,
+                filename=original,
+                file_path=path,
+                status="uploaded",
+            )
+            db.session.add(new_doc)
+            db.session.commit()
+
+            # Automatically trigger extraction & chunking pipeline
+            success, msg, chunk_count = process_document_pipeline(new_doc.document_id)
+            if success:
+                flash(f"Document / PDF uploaded and processed successfully! ({chunk_count} chunks ready)", "success")
+            else:
+                flash(f"Document uploaded, but processing notice: {msg}", "warning")
+
+            if is_ajax:
+                return jsonify({
+                    "success": success,
+                    "message": msg if not success else f"{original} uploaded successfully! ({chunk_count} chunks ready)",
+                    "document_id": new_doc.document_id,
+                    "filename": original,
+                    "status": new_doc.status,
+                    "chunks": chunk_count,
+                    "error": None if success else msg,
+                })
+
+            redirect_to = request.form.get("redirect_to")
+            if redirect_to == "chat":
+                return redirect(url_for("chat.chat"))
+
             return redirect(url_for("documents.library"))
 
-        allowed_extensions = {".pdf", ".docx", ".doc"}
-        ext = os.path.splitext(file.filename.lower())[1]
-        if ext not in allowed_extensions:
-            flash("Only PDF files are allowed (PDF and Word DOC/DOCX supported).", "danger")
+        except Exception as e:
+            db.session.rollback()
+            import logging
+            import traceback
+            logging.error(f"Error during document upload: {e}\n{traceback.format_exc()}")
+            if is_ajax:
+                return jsonify({"success": False, "error": f"Upload failed: {str(e)}"}), 500
+            flash(f"Upload failed: {str(e)}", "danger")
             return redirect(url_for("documents.library"))
-
-        # Magic bytes verification for security
-        header = file.stream.read(8)
-        file.stream.seek(0)
-        if ext == ".pdf" and not header.startswith(b"%PDF-"):
-            flash("File verification failed: Content does not match valid PDF file structure.", "danger")
-            return redirect(url_for("documents.library"))
-        if ext == ".docx" and not header.startswith(b"PK\x03\x04"):
-            flash("File verification failed: Content does not match valid DOCX file structure.", "danger")
-            return redirect(url_for("documents.library"))
-
-        original = secure_filename(os.path.basename(file.filename))
-        stored = f"{uuid.uuid4().hex}_{original}"
-        from services.security_service import (
-            compute_file_sha256,
-            get_secure_user_upload_dir,
-            log_security_event,
-        )
-        user_dir = get_secure_user_upload_dir(current_app.config["UPLOAD_FOLDER"], user_id)
-        path = os.path.join(user_dir, stored)
-        file.save(path)
-        sha_checksum = compute_file_sha256(path)
-        log_security_event("DOCUMENT_UPLOADED", user_id, {"filename": original, "sha256": sha_checksum})
-
-        new_doc: Any = Document(
-            user_id=user_id,
-            filename=original,
-            file_path=path,
-            status="uploaded",
-        )
-        db.session.add(new_doc)
-        db.session.commit()
-
-        # Automatically trigger extraction & chunking pipeline
-        success, msg, chunk_count = process_document_pipeline(new_doc.document_id)
-        if success:
-            flash(f"Document / PDF uploaded and processed successfully! ({chunk_count} chunks ready)", "success")
-        else:
-            flash(f"Document uploaded, but processing had an issue: {msg}", "warning")
-
-        if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
-            return jsonify({
-                "success": success,
-                "message": msg if not success else f"{original} uploaded successfully! ({chunk_count} chunks ready)",
-                "document_id": new_doc.document_id,
-                "filename": original,
-                "status": new_doc.status,
-                "chunks": chunk_count,
-            })
-
-        redirect_to = request.form.get("redirect_to")
-        if redirect_to == "chat":
-            return redirect(url_for("chat.chat"))
-
-        return redirect(url_for("documents.library"))
 
     # SECURITY: only this user's documents
     docs = Document.query.filter_by(user_id=user_id).order_by(Document.uploaded_at.desc()).all()

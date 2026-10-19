@@ -8,6 +8,10 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 os.environ["USE_TF"] = "0"
 os.environ["USE_TORCH"] = "1"
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 load_dotenv()  # reads the .env file
 
@@ -89,7 +93,7 @@ class Config:
     # Security and Session configuration
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
-    SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() in ("true", "1")
+    SESSION_COOKIE_SECURE = IS_CLOUD or os.getenv("SESSION_COOKIE_SECURE", "false").lower() in ("true", "1")
     PERMANENT_SESSION_LIFETIME = 86400  # 24 hours
 
     # LLM and Local Model configuration
