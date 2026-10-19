@@ -281,80 +281,76 @@
             {% endif %}
           {% endfor %}
         {% else %}
-          <!-- Welcome Prompt Screen: Designed with Profile Settings Card Visual Standard -->
-          <div class="m-auto text-center px-3 py-4 w-100" style="max-width: 740px;" id="in-chat-welcome-box">
-            <!-- AI Core Icon -->
-            <div class="hero-ai-beacon-wrapper mb-3">
-              <div class="hero-beacon-ring hero-beacon-ring-outer"></div>
-              <div class="hero-beacon-ring hero-beacon-ring-mid"></div>
-              <div class="hero-beacon-core">
-                <i class="bi bi-cpu-fill"></i>
-              </div>
+          <!-- Welcome Prompt Screen: Clean Minimal Standard -->
+          <div class="m-auto text-center px-3 py-4 w-100" style="max-width: 680px;" id="in-chat-welcome-box">
+            <!-- Minimal AI Spark Emblem -->
+            <div class="welcome-emblem mx-auto mb-3">
+              <i class="bi bi-stars"></i>
             </div>
             
-            <h4 class="display-title fw-bold mb-1">Intelligent Document Studio</h4>
-            <p class="text-secondary small mb-4" style="max-width: 540px; margin: 0 auto; line-height: 1.6;">
-              Conversational intelligence powered by FAISS vector embeddings and PostgreSQL. Ask questions, audit contracts, and extract grounded facts with verifiable citations.
+            <h4 class="fw-bold mb-2 text-main" style="letter-spacing: -0.02em;">How can I help you today?</h4>
+            <p class="text-secondary small mb-4" style="max-width: 480px; margin: 0 auto; line-height: 1.5;">
+              Ask questions, audit contracts, or extract grounded insights from your uploaded documents.
             </p>
 
-            <!-- Curated Executive Action Grid (Matching Profile Settings Cards) -->
-            <div class="row g-3 mb-4 text-start">
+            <!-- Minimal Single-Tier Prompt Cards -->
+            <div class="row g-2.5 mb-3 text-start">
               <div class="col-sm-6">
-                <div class="card shadow-sm p-3 h-100 studio-action-card cursor-pointer" onclick="setQuickPrompt('Provide an executive summary of key findings, action items, and deliverables from my attached documents.')">
-                  <div class="d-flex align-items-center gap-3">
-                    <div class="studio-badge-icon flex-shrink-0 badge-indigo">
-                      <i class="bi bi-file-earmark-bar-graph"></i>
+                <div class="clean-prompt-card" onclick="setQuickPrompt('Summarize key findings, action items, and deliverables from my attached documents.')">
+                  <div class="d-flex align-items-center gap-2.5">
+                    <span class="clean-prompt-icon text-primary">
+                      <i class="bi bi-file-earmark-text"></i>
+                    </span>
+                    <div class="flex-grow-1 overflow-hidden">
+                      <div class="clean-prompt-title text-truncate">Summarize Key Findings</div>
+                      <div class="clean-prompt-desc text-truncate">Executive takeaways & deliverables</div>
                     </div>
-                    <div>
-                      <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.68rem; letter-spacing: 0.5px;">Summary & Deliverables</div>
-                      <div class="fw-bold text-main" style="font-size: 0.95rem;">Executive Briefing</div>
-                      <div class="text-secondary small mt-0.5" style="font-size: 0.74rem; line-height: 1.4;">Summarize core findings, takeaways, and deliverables.</div>
-                    </div>
+                    <i class="bi bi-arrow-right clean-prompt-arrow"></i>
                   </div>
                 </div>
               </div>
 
               <div class="col-sm-6">
-                <div class="card shadow-sm p-3 h-100 studio-action-card cursor-pointer" onclick="setQuickPrompt('Audit this document for legal liabilities, critical obligations, deadlines, and risk factors.')">
-                  <div class="d-flex align-items-center gap-3">
-                    <div class="studio-badge-icon flex-shrink-0 badge-cyan">
+                <div class="clean-prompt-card" onclick="setQuickPrompt('Audit this document for legal liabilities, critical obligations, deadlines, and risk factors.')">
+                  <div class="d-flex align-items-center gap-2.5">
+                    <span class="clean-prompt-icon text-info">
                       <i class="bi bi-shield-check"></i>
+                    </span>
+                    <div class="flex-grow-1 overflow-hidden">
+                      <div class="clean-prompt-title text-truncate">Audit Risk & Obligations</div>
+                      <div class="clean-prompt-desc text-truncate">Liabilities, compliance & critical dates</div>
                     </div>
-                    <div>
-                      <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.68rem; letter-spacing: 0.5px;">Audit & Risk Analysis</div>
-                      <div class="fw-bold text-main" style="font-size: 0.95rem;">Risk & Compliance</div>
-                      <div class="text-secondary small mt-0.5" style="font-size: 0.74rem; line-height: 1.4;">Identify liabilities, obligations, and critical dates.</div>
-                    </div>
+                    <i class="bi bi-arrow-right clean-prompt-arrow"></i>
                   </div>
                 </div>
               </div>
 
               <div class="col-sm-6">
-                <div class="card shadow-sm p-3 h-100 studio-action-card cursor-pointer" onclick="setQuickPrompt('Compare and contrast the primary arguments, metrics, and data points across the connected documents.')">
-                  <div class="d-flex align-items-center gap-3">
-                    <div class="studio-badge-icon flex-shrink-0 badge-emerald">
+                <div class="clean-prompt-card" onclick="setQuickPrompt('Compare and contrast the primary arguments, metrics, and data points across the connected documents.')">
+                  <div class="d-flex align-items-center gap-2.5">
+                    <span class="clean-prompt-icon text-success">
                       <i class="bi bi-diagram-3"></i>
+                    </span>
+                    <div class="flex-grow-1 overflow-hidden">
+                      <div class="clean-prompt-title text-truncate">Comparative Analysis</div>
+                      <div class="clean-prompt-desc text-truncate">Cross-reference metrics & arguments</div>
                     </div>
-                    <div>
-                      <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.68rem; letter-spacing: 0.5px;">Cross-Document Intel</div>
-                      <div class="fw-bold text-main" style="font-size: 0.95rem;">Comparative Analysis</div>
-                      <div class="text-secondary small mt-0.5" style="font-size: 0.74rem; line-height: 1.4;">Cross-reference patterns, inconsistencies, and metrics.</div>
-                    </div>
+                    <i class="bi bi-arrow-right clean-prompt-arrow"></i>
                   </div>
                 </div>
               </div>
 
               <div class="col-sm-6">
-                <div class="card shadow-sm p-3 h-100 studio-action-card cursor-pointer" onclick="setQuickPrompt('Draft a concise, professional briefing email summarizing the core takeaways for stakeholders.')">
-                  <div class="d-flex align-items-center gap-3">
-                    <div class="studio-badge-icon flex-shrink-0 badge-violet">
-                      <i class="bi bi-envelope-paper"></i>
+                <div class="clean-prompt-card" onclick="setQuickPrompt('Draft a concise, professional briefing email summarizing the core takeaways for stakeholders.')">
+                  <div class="d-flex align-items-center gap-2.5">
+                    <span class="clean-prompt-icon text-secondary">
+                      <i class="bi bi-send"></i>
+                    </span>
+                    <div class="flex-grow-1 overflow-hidden">
+                      <div class="clean-prompt-title text-truncate">Stakeholder Briefing</div>
+                      <div class="clean-prompt-desc text-truncate">Draft ready-to-send executive update</div>
                     </div>
-                    <div>
-                      <div class="text-muted small text-uppercase fw-semibold" style="font-size: 0.68rem; letter-spacing: 0.5px;">Stakeholder Comm</div>
-                      <div class="fw-bold text-main" style="font-size: 0.95rem;">Stakeholder Briefing</div>
-                      <div class="text-secondary small mt-0.5" style="font-size: 0.74rem; line-height: 1.4;">Draft a ready-to-send update explaining key takeaways.</div>
-                    </div>
+                    <i class="bi bi-arrow-right clean-prompt-arrow"></i>
                   </div>
                 </div>
               </div>
@@ -362,29 +358,30 @@
 
             <!-- Quick Document Attacher from Library -->
             {% if docs and docs|length > 0 %}
-              <div class="card shadow-sm p-3 border mb-2 text-start">
-                <div class="d-flex justify-content-between align-items-center mb-2 px-1">
-                  <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-collection-play text-primary"></i>
-                    <span class="small fw-bold text-main">Quick Attach from Knowledge Vault:</span>
-                  </div>
-                  <a href="{{ url_for('documents.library') }}" class="small text-accent text-decoration-none" style="font-size: 0.74rem;">Manage All ({{ docs|length }}) &rarr;</a>
+              <div class="mt-3 pt-2 text-center">
+                <div class="d-flex align-items-center justify-content-center gap-2 mb-2 text-muted" style="font-size: 0.78rem;">
+                  <i class="bi bi-paperclip"></i>
+                  <span>Quick attach from library:</span>
+                  <a href="{{ url_for('documents.library') }}" class="text-accent text-decoration-none ms-1" style="font-size: 0.74rem;">View all ({{ docs|length }})</a>
                 </div>
-                <div class="d-flex flex-wrap gap-2">
-                  {% for d in docs[:6] %}
-                    <button type="button" class="btn btn-sm library-chip-btn d-inline-flex align-items-center gap-1.5"
+                <div class="d-flex flex-wrap justify-content-center gap-1.5">
+                  {% for d in docs[:5] %}
+                    <button type="button" class="btn btn-sm clean-doc-chip"
                             data-doc-id="{{ d.document_id }}"
                             data-doc-name="{{ d.filename }}"
-                            onclick="handleInsertDoc(this)">
+                            onclick="handleInsertDoc(this)"
+                            title="Attach {{ d.filename }}">
                       {% if d.filename and (d.filename.lower().endswith('.docx') or d.filename.lower().endswith('.doc')) %}
                         <i class="bi bi-file-earmark-word text-info"></i>
                       {% elif d.filename and d.filename.lower().endswith('.pdf') %}
                         <i class="bi bi-file-earmark-pdf text-danger"></i>
+                      {% elif d.filename and d.filename.lower().endswith('.csv') %}
+                        <i class="bi bi-file-earmark-spreadsheet text-success"></i>
                       {% else %}
                         <i class="bi bi-file-earmark-text text-secondary"></i>
                       {% endif %}
                       <span class="text-truncate" style="max-width: 140px;">{{ d.filename }}</span>
-                      <i class="bi bi-plus-circle text-primary ms-0.5"></i>
+                      <i class="bi bi-plus text-muted ms-0.5" style="font-size: 0.85rem;"></i>
                     </button>
                   {% endfor %}
                 </div>

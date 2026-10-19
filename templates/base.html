@@ -37,29 +37,12 @@
   <nav class="navbar navbar-expand-lg navbar-custom" id="main-navbar">
     <div class="container-fluid px-3 px-lg-4">
     <!-- Brand Logo & Identity -->
-    <a class="navbar-brand d-flex align-items-center gap-2 me-3" href="{{ url_for('dashboard') }}">
+    <a class="navbar-brand d-flex align-items-center gap-2 me-3" href="{{ url_for('dashboard') }}" title="DocuMind AI Workspace">
       <span class="brand-badge-icon">
         <i class="bi bi-cpu-fill"></i>
       </span>
-      <div class="d-flex flex-column">
-        <span class="navbar-brand-text">DocuMind<span class="brand-accent-text">AI</span></span>
-        <span class="brand-subtext d-none d-sm-inline">Intelligent Document Assistant</span>
-      </div>
+      <span class="navbar-brand-text">DocuMind<span class="brand-accent-text">AI</span></span>
     </a>
-
-    <!-- Live Engine Status Badge -->
-    <div class="status-pill d-none d-lg-inline-flex align-items-center gap-2" title="FAISS Vector Search & Real-time RAG Ready">
-      <span class="pulse-dot"></span>
-      <span class="status-text">AI Engine Active</span>
-    </div>
-
-    <!-- Live Database Persistence Telemetry Pill -->
-    {% if db_info %}
-      <div class="status-pill d-none d-xl-inline-flex align-items-center gap-1.5 ms-2" title="Application Database: {{ db_info.type }}">
-        <i class="bi {{ db_info.icon }} {% if db_info.is_persistent %}text-success{% else %}text-warning{% endif %}"></i>
-        <span class="status-text">{{ db_info.label }}</span>
-      </div>
-    {% endif %}
 
     <!-- Mobile Menu Toggle Button -->
     <button class="navbar-toggler border-0 p-2 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMainContent" aria-controls="navbarMainContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -96,11 +79,10 @@
 
       <!-- Right Action Controls -->
       <div class="d-flex align-items-center gap-2 ms-auto pt-2 pt-lg-0">
-        <!-- Theme Mode Selector (System, Light, Dark) -->
+        <!-- Theme Mode Selector (Icon-only, Minimal) -->
         <div class="dropdown" id="theme-selector-dropdown">
-          <button class="btn btn-sm btn-nav-action d-inline-flex align-items-center gap-1 dropdown-toggle shadow-none" type="button" id="themeMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Switch Theme">
+          <button class="btn btn-sm btn-nav-icon shadow-none" type="button" id="themeMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Switch Theme">
             <i class="bi bi-circle-half" id="theme-btn-icon"></i>
-            <span class="d-none d-xl-inline small" id="theme-btn-label">Auto</span>
           </button>
           <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 dropdown-menu-glass mt-2" aria-labelledby="themeMenuDropdown" style="min-width: 140px;">
             <li>

@@ -418,6 +418,28 @@ a:hover {
   transform: translateY(-1px);
 }
 
+.btn-nav-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--bg-surface-1);
+  border: 1px solid var(--card-border);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  transition: all 0.18s ease;
+  padding: 0;
+}
+
+.btn-nav-icon:hover {
+  background: var(--bg-surface-2);
+  border-color: var(--card-border-focus);
+  color: var(--text-main);
+  transform: translateY(-1px);
+}
+
 /* User Avatar Initial */
 .user-avatar-initials {
   width: 32px;
@@ -924,6 +946,120 @@ a:hover {
 [data-theme="dark"] .studio-action-card:hover {
   border-color: rgba(56, 189, 248, 0.45) !important;
   box-shadow: 0 8px 24px -4px rgba(6, 182, 212, 0.2) !important;
+}
+
+/* Clean Minimal Welcome Emblem */
+.welcome-emblem {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--primary-light);
+  border: 1px solid var(--card-border-focus);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  color: var(--primary-color);
+}
+
+[data-theme="dark"] .welcome-emblem {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.25);
+  color: var(--accent-cyan);
+}
+
+/* Clean Minimal Prompt Cards (ChatGPT / Claude Standard) */
+.clean-prompt-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: left;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.clean-prompt-card:hover {
+  background: var(--bg-surface-2);
+  border-color: var(--card-border-focus);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme="dark"] .clean-prompt-card:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 4px 20px -2px rgba(6, 182, 212, 0.15);
+}
+
+.clean-prompt-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--primary-light);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .clean-prompt-icon {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.clean-prompt-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+
+.clean-prompt-desc {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.clean-prompt-card:hover .clean-prompt-arrow {
+  transform: translateX(3px);
+  color: var(--primary-color);
+}
+
+[data-theme="dark"] .clean-prompt-card:hover .clean-prompt-arrow {
+  color: var(--accent-cyan);
+}
+
+.clean-prompt-arrow {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  transition: transform 0.18s ease, color 0.18s ease;
+  flex-shrink: 0;
+}
+
+/* Clean Document Attach Chips */
+.clean-doc-chip {
+  background: var(--bg-surface-1);
+  border: 1px solid var(--card-border);
+  border-radius: 9999px;
+  color: var(--text-main);
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 0.32rem 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.18s ease;
+}
+
+.clean-doc-chip:hover {
+  background: var(--bg-surface-2);
+  border-color: var(--card-border-focus);
+  color: var(--primary-color);
+  transform: translateY(-1px);
 }
 
 .studio-badge-icon {
