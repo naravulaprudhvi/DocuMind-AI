@@ -53,18 +53,21 @@ class Config:
             "connect_args": {"timeout": 15},
         }
     elif DATABASE_URL:
-        if DATABASE_URL.startswith("mysql://"):
-            SQLALCHEMY_DATABASE_URI = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
-        elif DATABASE_URL.startswith("postgres://"):
-            SQLALCHEMY_DATABASE_URI = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        raw_url = DATABASE_URL.strip()
+        if raw_url.startswith("postgres://"):
+            SQLALCHEMY_DATABASE_URI = raw_url.replace("postgres://", "postgresql+psycopg2://", 1)
+        elif raw_url.startswith("postgresql://") and "+psycopg2" not in raw_url:
+            SQLALCHEMY_DATABASE_URI = raw_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+        elif raw_url.startswith("mysql://") and "+pymysql" not in raw_url:
+            SQLALCHEMY_DATABASE_URI = raw_url.replace("mysql://", "mysql+pymysql://", 1)
         else:
-            SQLALCHEMY_DATABASE_URI = DATABASE_URL
+            SQLALCHEMY_DATABASE_URI = raw_url
 
         connect_args = {}
         if "mysql" in SQLALCHEMY_DATABASE_URI:
-            connect_args = {"connect_timeout": 5}
+            connect_args = {"connect_timeout": 10}
         elif "postgres" in SQLALCHEMY_DATABASE_URI:
-            connect_args = {"connect_timeout": 5}
+            connect_args = {"connect_timeout": 10}
 
         SQLALCHEMY_ENGINE_OPTIONS = {
             "pool_recycle": 1800,

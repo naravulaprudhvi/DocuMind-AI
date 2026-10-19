@@ -93,6 +93,15 @@ def load_document_index(document_id: int) -> faiss.Index | None:
 
     path = get_document_index_path(document_id)
     if not os.path.exists(path):
+        # Auto-rebuild index on-demand from DB chunks if container disk was refreshed
+        try:
+            from models.document import DocumentChunk
+            chunks = DocumentChunk.query.filter_by(document_id=document_id).order_by(DocumentChunk.chunk_id.asc()).all()
+            if chunks:
+                build_and_save_index(document_id, chunks)
+                return faiss_index_cache.get(cache_key)
+        except Exception:
+            pass
         return None
     index = faiss.read_index(path)
     faiss_index_cache.set(cache_key, index)
