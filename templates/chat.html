@@ -27,101 +27,132 @@
       <i class="bi bi-plus-lg"></i> New Chat
     </a>
 
-    <!-- 1. Recent Chats (Chat History) -->
-    <div class="card shadow-sm border-0 p-3 mb-2 chat-sidebar-card-chats">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <span class="fw-bold small text-muted text-uppercase d-flex align-items-center gap-1">
-          <i class="bi bi-clock-history text-primary"></i> Recent Chats
-        </span>
+    <!-- Unified Studio Navigator Panel -->
+    <div class="card shadow-sm border-0 chat-sidebar-unified d-flex flex-column h-100">
+      <!-- Top Action: New Chat Button -->
+      <div class="p-3 pb-2 border-bottom flex-shrink-0">
+        <a href="{{ url_for('chat.chat') }}" class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2 py-2.5 rounded-3 btn-new-thread shadow-sm">
+          <i class="bi bi-plus-lg"></i>
+          <span class="fw-semibold">New Thread</span>
+          <span class="badge bg-white text-primary rounded-pill ms-auto px-2 py-0.5" style="font-size: 0.68rem; font-weight: 700;">+</span>
+        </a>
+
+        <!-- Segmented Tab Switcher: Threads vs Knowledge Vault -->
+        <div class="sidebar-tab-switcher mt-2.5 p-1 rounded-3 d-flex" role="tablist">
+          <button type="button" class="sidebar-tab-btn active flex-fill d-flex align-items-center justify-content-center gap-1.5 py-1.5 px-2 rounded-2" id="tab-btn-chats" onclick="switchSidebarTab('chats')">
+            <i class="bi bi-chat-left-text"></i>
+            <span>Threads</span>
+            <span class="sidebar-count-badge" id="sidebar-chat-count">{{ (grouped_conversations|map(attribute=1)|map('length')|sum) if grouped_conversations else 0 }}</span>
+          </button>
+          <button type="button" class="sidebar-tab-btn flex-fill d-flex align-items-center justify-content-center gap-1.5 py-1.5 px-2 rounded-2" id="tab-btn-docs" onclick="switchSidebarTab('docs')">
+            <i class="bi bi-folder2-open"></i>
+            <span>Vault</span>
+            <span class="sidebar-count-badge" id="account-doc-count">{{ docs|length }}</span>
+          </button>
+        </div>
+
+        <!-- Quick Search Filter -->
+        <div class="sidebar-search-box mt-2 position-relative">
+          <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-2.5 text-muted" style="font-size: 0.76rem;"></i>
+          <input type="text" id="sidebar-quick-filter" class="form-control form-control-sm ps-4" placeholder="Filter threads or files..." oninput="filterSidebarItems(this.value)">
+        </div>
       </div>
-      <div class="small text-muted mb-2 fst-italic" style="font-size: 0.75rem;">
-        Right-click any chat to pin or delete.
-      </div>
-      <div class="list-group list-group-flush" id="chat-history-list">
-        {% if grouped_conversations %}
-          {% for group_title, conv_list in grouped_conversations %}
-            <div class="chat-time-header px-2 pt-2 pb-1 text-muted text-uppercase fw-bold chat-group-{{ group_title|lower|replace(' ', '-') }}" style="font-size: 0.68rem; letter-spacing: 0.5px;">
-              <i class="bi bi-calendar3 me-1"></i> {{ group_title }}
-            </div>
-            {% for c in conv_list %}
-              <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-2 py-2 chat-item-context {% if active_conv and active_conv.conversation_id == c.conversation_id %}active rounded{% endif %}"
-                   id="chat-row-{{ c.conversation_id }}"
-                   data-conv-id="{{ c.conversation_id }}"
-                   data-conv-title="{{ c.title }}">
-                <a href="{{ url_for('chat.chat', c=c.conversation_id) }}" class="text-decoration-none text-truncate flex-grow-1 d-flex flex-column {% if active_conv and active_conv.conversation_id == c.conversation_id %}text-white{% else %}chat-conv-link{% endif %}">
-                  <div class="d-flex align-items-center text-truncate">
-                    <i class="bi bi-chat-left-text me-1 flex-shrink-0"></i>
-                    <span class="conv-title-text text-truncate">{{ c.title }}</span>
-                    <span class="chat-pin-icon d-none ms-1 flex-shrink-0"><i class="bi bi-pin-angle-fill text-warning" title="Pinned to top"></i></span>
+
+      <!-- Tab Content Area (Scrollable) -->
+      <div class="flex-grow-1 overflow-auto p-2" id="sidebar-scrollable-content">
+        <!-- 1. Recent Threads Pane -->
+        <div id="sidebar-pane-chats" class="sidebar-tab-pane">
+          <div class="d-flex justify-content-between align-items-center px-2 py-1 mb-1">
+            <span class="small fw-semibold text-muted text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.5px;">History</span>
+            <span class="small text-muted" style="font-size: 0.68rem;">Right-click to pin</span>
+          </div>
+          <div class="list-group list-group-flush" id="chat-history-list">
+            {% if grouped_conversations %}
+              {% for group_title, conv_list in grouped_conversations %}
+                <div class="chat-time-header px-2 pt-2 pb-1 text-muted text-uppercase fw-bold chat-group-{{ group_title|lower|replace(' ', '-') }}" style="font-size: 0.68rem; letter-spacing: 0.5px;">
+                  <i class="bi bi-calendar3 me-1"></i> {{ group_title }}
+                </div>
+                {% for c in conv_list %}
+                  <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-2.5 py-2 chat-item-context {% if active_conv and active_conv.conversation_id == c.conversation_id %}active rounded-2{% endif %}"
+                       id="chat-row-{{ c.conversation_id }}"
+                       data-conv-id="{{ c.conversation_id }}"
+                       data-conv-title="{{ c.title }}">
+                    <a href="{{ url_for('chat.chat', c=c.conversation_id) }}" class="text-decoration-none text-truncate flex-grow-1 d-flex flex-column {% if active_conv and active_conv.conversation_id == c.conversation_id %}text-white{% else %}chat-conv-link{% endif %}">
+                      <div class="d-flex align-items-center text-truncate">
+                        <i class="bi bi-chat-left-text me-1.5 flex-shrink-0" style="font-size: 0.8rem;"></i>
+                        <span class="conv-title-text text-truncate">{{ c.title }}</span>
+                        <span class="chat-pin-icon d-none ms-1 flex-shrink-0"><i class="bi bi-pin-angle-fill text-warning" title="Pinned to top"></i></span>
+                      </div>
+                      <span class="chat-item-time text-truncate ps-3" style="font-size: 0.68rem; opacity: 0.75;" data-utc="{{ c.created_at.isoformat() if c.created_at else '' }}">
+                        {{ c.created_at.strftime('%I:%M %p') if c.created_at else '' }}
+                      </span>
+                    </a>
+                    <form method="post" action="{{ url_for('chat.delete_conversation', conv_id=c.conversation_id) }}" class="d-none chat-delete-form" id="delete-chat-form-{{ c.conversation_id }}"></form>
                   </div>
-                  <span class="chat-item-time text-truncate ps-3" style="font-size: 0.68rem; opacity: 0.75;" data-utc="{{ c.created_at.isoformat() if c.created_at else '' }}">
-                    {{ c.created_at.strftime('%I:%M %p') if c.created_at else '' }}
-                  </span>
-                </a>
-                <form method="post" action="{{ url_for('chat.delete_conversation', conv_id=c.conversation_id) }}" class="d-none chat-delete-form" id="delete-chat-form-{{ c.conversation_id }}"></form>
+                {% endfor %}
+              {% endfor %}
+            {% else %}
+              <div class="text-muted small py-4 text-center" id="no-chats-hint">
+                <i class="bi bi-chat-square-dots fs-3 d-block mb-1 text-muted opacity-50"></i>
+                No past conversations.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- 2. Knowledge Vault Pane -->
+        <div id="sidebar-pane-docs" class="sidebar-tab-pane d-none">
+          <div class="d-flex justify-content-between align-items-center px-2 py-1 mb-1">
+            <span class="small fw-semibold text-muted text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.5px;">Indexed Documents</span>
+            <a href="{{ url_for('documents.library') }}" class="small text-accent text-decoration-none" style="font-size: 0.68rem;">Open Library &rarr;</a>
+          </div>
+          <div class="vstack gap-1" id="previous-docs-list">
+            {% for d in docs %}
+              <div class="d-flex justify-content-between align-items-center py-1.5 px-2 rounded-2 hover-bg doc-item-context"
+                   id="prev-doc-row-{{ d.document_id }}"
+                   data-doc-id="{{ d.document_id }}"
+                   data-doc-name="{{ d.filename }}">
+                <div class="d-flex align-items-center gap-2 small text-truncate" title="{{ d.filename }}">
+                  {% if d.filename and (d.filename.lower().endswith('.docx') or d.filename.lower().endswith('.doc')) %}
+                    <i class="bi bi-file-earmark-word text-info flex-shrink-0"></i>
+                  {% elif d.filename and d.filename.lower().endswith('.pdf') %}
+                    <i class="bi bi-file-earmark-pdf text-danger flex-shrink-0"></i>
+                  {% else %}
+                    <i class="bi bi-file-earmark-text text-secondary flex-shrink-0"></i>
+                  {% endif %}
+                  <a href="{{ url_for('documents.view_document', doc_id=d.document_id) }}" target="_blank" class="text-truncate doc-name-text text-decoration-none hover-primary" style="max-width: 110px;" title="View original {{ d.filename }}">
+                    {{ d.filename }}
+                  </a>
+                  <span class="doc-pin-icon d-none"><i class="bi bi-pin-angle-fill text-warning" title="Pinned to top"></i></span>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                  <a href="{{ url_for('documents.view_document', doc_id=d.document_id) }}" target="_blank" class="btn btn-sm btn-link text-muted p-0 px-1" title="View original document">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill insert-doc-btn" style="font-size: 0.72rem;" onclick="handleToggleDoc(this)">
+                    <i class="bi bi-plus"></i> Insert
+                  </button>
+                  <form method="post" action="{{ url_for('documents.delete', doc_id=d.document_id) }}" class="d-none doc-delete-form" id="delete-doc-form-{{ d.document_id }}">
+                    <input type="hidden" name="redirect_to" value="chat">
+                  </form>
+                </div>
+              </div>
+            {% else %}
+              <div class="text-muted small py-4 text-center" id="no-docs-hint">
+                <i class="bi bi-folder-x fs-3 d-block mb-1 text-muted opacity-50"></i>
+                No documents in vault.<br>
+                <a href="{{ url_for('documents.library') }}" class="text-primary text-decoration-none small">Upload to Knowledge Base &rarr;</a>
               </div>
             {% endfor %}
-          {% endfor %}
-        {% else %}
-          <div class="text-muted small py-3 text-center" id="no-chats-hint">No past conversations.</div>
-        {% endif %}
+          </div>
+        </div>
       </div>
-    </div>
 
-    <!-- 2. UNDER CHAT HISTORY: Previous Documents -->
-    <div class="card shadow-sm border-0 p-3 chat-sidebar-card-docs">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <a href="{{ url_for('documents.library') }}" class="fw-bold small text-muted text-uppercase text-decoration-none hover-primary d-inline-flex align-items-center gap-1" title="Open Document Knowledge Base">
-          <i class="bi bi-folder2-open text-primary"></i>
-          <span>Previous Documents</span>
-          <i class="bi bi-box-arrow-up-right" style="font-size: 0.72rem;"></i>
-        </a>
-        <a href="{{ url_for('documents.library') }}" class="badge bg-primary text-decoration-none rounded-pill" id="account-doc-count" title="Open Document Knowledge Base">{{ docs|length }}</a>
-      </div>
-      <div class="small text-muted mb-2 fst-italic" style="font-size: 0.75rem;">
-        Click <strong>+ Insert</strong> to chat with a document. Click title to open Knowledge Base.
-      </div>
-      <div class="vstack gap-1" id="previous-docs-list">
-        {% for d in docs %}
-          <div class="d-flex justify-content-between align-items-center py-1 px-1 rounded hover-bg doc-item-context"
-               id="prev-doc-row-{{ d.document_id }}"
-               data-doc-id="{{ d.document_id }}"
-               data-doc-name="{{ d.filename }}">
-            <div class="d-flex align-items-center gap-2 small text-truncate" title="{{ d.filename }}">
-              {% if d.filename and (d.filename.lower().endswith('.docx') or d.filename.lower().endswith('.doc')) %}
-                <i class="bi bi-file-earmark-word text-primary"></i>
-              {% elif d.filename and d.filename.lower().endswith('.pdf') %}
-                <i class="bi bi-file-earmark-pdf text-danger"></i>
-              {% else %}
-                <i class="bi bi-file-earmark-text text-secondary"></i>
-              {% endif %}
-              <a href="{{ url_for('documents.view_document', doc_id=d.document_id) }}" target="_blank" class="text-truncate doc-name-text text-decoration-none hover-primary" style="max-width: 105px;" title="View original {{ d.filename }}">
-                {{ d.filename }}
-              </a>
-              <span class="doc-pin-icon d-none"><i class="bi bi-pin-angle-fill text-warning" title="Pinned to top"></i></span>
-            </div>
-            <div class="d-flex align-items-center gap-1">
-              <a href="{{ url_for('documents.view_document', doc_id=d.document_id) }}" target="_blank" class="btn btn-sm btn-link text-muted p-0 px-1" title="View original document">
-                <i class="bi bi-eye"></i>
-              </a>
-              <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill insert-doc-btn" style="font-size: 0.72rem;" onclick="handleToggleDoc(this)">
-                <i class="bi bi-plus"></i> Insert
-              </button>
-              <form method="post" action="{{ url_for('documents.delete', doc_id=d.document_id) }}" class="d-none doc-delete-form" id="delete-doc-form-{{ d.document_id }}">
-                <input type="hidden" name="redirect_to" value="chat">
-              </form>
-            </div>
-          </div>
-        {% else %}
-          <div class="text-muted small py-2 text-center" id="no-docs-hint">
-            No previous documents.<br>
-            <a href="{{ url_for('documents.library') }}" class="text-primary text-decoration-none small">Go to Knowledge Base &rarr;</a>
-          </div>
-        {% endfor %}
-      </div>
-      <div class="mt-auto pt-2 border-top chat-docs-upload-footer">
-        <button type="button" class="btn btn-outline-secondary btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1" onclick="document.getElementById('chat-file-input').click()">
-          <i class="bi bi-cloud-arrow-up"></i> Upload Document
+      <!-- Footer: Fast Upload -->
+      <div class="p-2.5 border-top chat-sidebar-footer flex-shrink-0">
+        <button type="button" class="btn btn-outline-secondary btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1.5 py-2 rounded-3" onclick="document.getElementById('chat-file-input').click()">
+          <i class="bi bi-cloud-arrow-up text-primary"></i>
+          <span>Upload Document</span>
         </button>
       </div>
     </div>
@@ -256,47 +287,86 @@
             {% endif %}
           {% endfor %}
         {% else %}
-          <!-- Welcome Prompt Screen -->
-          <div class="m-auto text-center p-3" style="max-width: 520px;" id="in-chat-welcome-box">
-            <div class="chat-welcome-orb" style="width: 54px; height: 54px; margin-bottom: 0.6rem;">
-              <i class="bi bi-stars fs-4"></i>
+          <!-- Welcome Prompt Screen: Executive AI Studio Canvas -->
+          <div class="m-auto text-center px-3 py-4 w-100" style="max-width: 680px;" id="in-chat-welcome-box">
+            <!-- Pulsing Concentric AI Core -->
+            <div class="hero-ai-beacon-wrapper mb-3">
+              <div class="hero-beacon-ring hero-beacon-ring-outer"></div>
+              <div class="hero-beacon-ring hero-beacon-ring-mid"></div>
+              <div class="hero-beacon-core">
+                <i class="bi bi-cpu-fill"></i>
+              </div>
             </div>
-            <h5 class="fw-bold mb-1 fs-5">How can DocuMind AI help you today?</h5>
-            <p class="text-muted small mb-3" style="font-size: 0.82rem;">
-              Ask basic questions, get coding and writing help, or attach documents (PDF, Word) for grounded analysis.
+            
+            <h4 class="display-title fw-bold mb-1">Intelligent Document Studio</h4>
+            <p class="text-secondary small mb-4" style="max-width: 500px; margin: 0 auto; line-height: 1.6;">
+              Conversational intelligence powered by FAISS vector search. Ask free-form questions or connect business files for grounded answers with verified citations.
             </p>
 
-            <!-- Quick Starters: Both General Info and Document Analysis -->
-            <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
-              <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 text-nowrap" onclick="setQuickPrompt('What are your capabilities and how can you help me?')">
-                💡 What can you do?
-              </button>
-              <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 text-nowrap" onclick="setQuickPrompt('Explain artificial intelligence in simple words')">
-                🧠 Explain a concept
-              </button>
-              <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 text-nowrap" onclick="setQuickPrompt('Help me write a concise professional email')">
-                ✍️ Writing assistance
-              </button>
-              <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 text-nowrap" onclick="document.getElementById('chat-file-input').click()">
-                <i class="bi bi-paperclip me-1"></i> Attach Document
-              </button>
+            <!-- Curated Executive Action Grid (4 Interactive Cards) -->
+            <div class="row g-2.5 mb-3.5 text-start">
+              <div class="col-sm-6">
+                <div class="prompt-starter-card" onclick="setQuickPrompt('Provide an executive summary of key findings, action items, and deliverables from my attached documents.')">
+                  <div class="d-flex align-items-center gap-2 mb-1.5">
+                    <span class="prompt-starter-icon text-indigo"><i class="bi bi-file-earmark-bar-graph"></i></span>
+                    <span class="prompt-starter-title">Executive Briefing</span>
+                  </div>
+                  <p class="prompt-starter-desc mb-0">Summarize high-level takeaways, core findings, and deliverables.</p>
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="prompt-starter-card" onclick="setQuickPrompt('Audit this document for legal liabilities, critical obligations, deadlines, and risk factors.')">
+                  <div class="d-flex align-items-center gap-2 mb-1.5">
+                    <span class="prompt-starter-icon text-cyan"><i class="bi bi-shield-check"></i></span>
+                    <span class="prompt-starter-title">Risk & Compliance Audit</span>
+                  </div>
+                  <p class="prompt-starter-desc mb-0">Identify compliance requirements, liabilities, and critical dates.</p>
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="prompt-starter-card" onclick="setQuickPrompt('Compare and contrast the primary arguments, metrics, and data points across the connected documents.')">
+                  <div class="d-flex align-items-center gap-2 mb-1.5">
+                    <span class="prompt-starter-icon text-emerald"><i class="bi bi-diagram-3"></i></span>
+                    <span class="prompt-starter-title">Comparative Analysis</span>
+                  </div>
+                  <p class="prompt-starter-desc mb-0">Cross-reference patterns, inconsistencies, and metrics across files.</p>
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="prompt-starter-card" onclick="setQuickPrompt('Draft a concise, professional briefing email summarizing the core takeaways for stakeholders.')">
+                  <div class="d-flex align-items-center gap-2 mb-1.5">
+                    <span class="prompt-starter-icon text-violet"><i class="bi bi-envelope-paper"></i></span>
+                    <span class="prompt-starter-title">Stakeholder Communication</span>
+                  </div>
+                  <p class="prompt-starter-desc mb-0">Draft a ready-to-send update explaining the critical takeaways.</p>
+                </div>
+              </div>
             </div>
 
+            <!-- Quick Document Attacher from Library -->
             {% if docs and docs|length > 0 %}
-              <div class="pt-2 border-top text-start" style="max-height: 100px; overflow-y: auto;">
-                <span class="text-secondary small fw-semibold d-block mb-1" style="font-size: 0.72rem;">
-                  <i class="bi bi-clock-history text-primary me-1"></i> Or quick insert from library:
-                </span>
-                <div class="d-flex flex-wrap gap-1">
-                  {% for d in docs %}
-                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 d-inline-flex align-items-center gap-1 rounded-pill"
+              <div class="library-quick-dock p-2.5 rounded-3 border">
+                <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+                  <span class="small fw-semibold text-main d-flex align-items-center gap-1.5" style="font-size: 0.76rem;">
+                    <i class="bi bi-collection-play text-primary"></i> Quick Attach from Knowledge Vault:
+                  </span>
+                  <a href="{{ url_for('documents.library') }}" class="small text-accent text-decoration-none" style="font-size: 0.72rem;">Manage All ({{ docs|length }}) &rarr;</a>
+                </div>
+                <div class="d-flex flex-wrap gap-1.5">
+                  {% for d in docs[:6] %}
+                    <button type="button" class="btn btn-sm library-chip-btn d-inline-flex align-items-center gap-1.5"
                             data-doc-id="{{ d.document_id }}"
                             data-doc-name="{{ d.filename }}"
-                            onclick="handleInsertDoc(this)"
-                            style="font-size: 0.72rem; height: 26px;">
-                      <i class="bi bi-file-earmark-text text-primary"></i>
-                      <span class="text-truncate" style="max-width: 120px;">{{ d.filename }}</span>
-                      <i class="bi bi-plus-circle text-success ms-1"></i>
+                            onclick="handleInsertDoc(this)">
+                      {% if d.filename and (d.filename.lower().endswith('.docx') or d.filename.lower().endswith('.doc')) %}
+                        <i class="bi bi-file-earmark-word text-info"></i>
+                      {% elif d.filename and d.filename.lower().endswith('.pdf') %}
+                        <i class="bi bi-file-earmark-pdf text-danger"></i>
+                      {% else %}
+                        <i class="bi bi-file-earmark-text text-secondary"></i>
+                      {% endif %}
+                      <span class="text-truncate" style="max-width: 140px;">{{ d.filename }}</span>
+                      <i class="bi bi-plus-circle text-primary ms-0.5"></i>
                     </button>
                   {% endfor %}
                 </div>
@@ -414,6 +484,43 @@
       input.value = promptText;
       input.focus();
     }
+  }
+
+  // Sidebar Tab Switcher (Threads vs Vault)
+  function switchSidebarTab(tab) {
+    const btnChats = document.getElementById('tab-btn-chats');
+    const btnDocs = document.getElementById('tab-btn-docs');
+    const paneChats = document.getElementById('sidebar-pane-chats');
+    const paneDocs = document.getElementById('sidebar-pane-docs');
+
+    if (tab === 'chats') {
+      if (btnChats) btnChats.classList.add('active');
+      if (btnDocs) btnDocs.classList.remove('active');
+      if (paneChats) paneChats.classList.remove('d-none');
+      if (paneDocs) paneDocs.classList.add('d-none');
+    } else {
+      if (btnDocs) btnDocs.classList.add('active');
+      if (btnChats) btnChats.classList.remove('active');
+      if (paneDocs) paneDocs.classList.remove('d-none');
+      if (paneChats) paneChats.classList.add('d-none');
+    }
+  }
+
+  // Live Search Filter for Threads and Vault
+  function filterSidebarItems(query) {
+    const q = (query || '').toLowerCase().trim();
+    // 1. Filter chat threads
+    const chatItems = document.querySelectorAll('.chat-item-context');
+    chatItems.forEach(item => {
+      const title = (item.getAttribute('data-conv-title') || '').toLowerCase();
+      item.style.display = (!q || title.includes(q)) ? '' : 'none';
+    });
+    // 2. Filter documents
+    const docItems = document.querySelectorAll('.doc-item-context');
+    docItems.forEach(item => {
+      const name = (item.getAttribute('data-doc-name') || '').toLowerCase();
+      item.style.display = (!q || name.includes(q)) ? '' : 'none';
+    });
   }
 
   // Utility: Rich Markdown Renderer (Bold, Italic, Code, Lists, Line Breaks)

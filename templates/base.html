@@ -7,7 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="{{ url_for('favicon') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
@@ -26,9 +26,16 @@
   </script>
 </head>
 <body class="{% block body_class %}{% endblock %}">
-<div class="app-top-accent-bar"></div>
-<nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top py-2" id="main-navbar">
-  <div class="container">
+<!-- Dynamic Ambient Mesh Glow Background -->
+<div class="ambient-mesh-glow" aria-hidden="true">
+  <div class="mesh-orb mesh-orb-1"></div>
+  <div class="mesh-orb mesh-orb-2"></div>
+  <div class="mesh-orb mesh-orb-3"></div>
+</div>
+
+<header class="app-header-wrapper sticky-top">
+  <nav class="navbar navbar-expand-lg navbar-custom floating-island-navbar" id="main-navbar">
+    <div class="container-fluid px-3 px-xl-4">
     <!-- Brand Logo & Identity -->
     <a class="navbar-brand d-flex align-items-center gap-2 me-3" href="{{ url_for('dashboard') }}">
       <span class="brand-badge-icon">
@@ -186,6 +193,7 @@
     </div>
   </div>
 </nav>
+</header>
 
 <!-- Cloud Ephemeral Storage Warning Banner (if running on cloud without persistent DATABASE_URL) -->
 {% if db_info and db_info.warning %}
