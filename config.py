@@ -24,19 +24,30 @@ class Config:
     DATABASE_URL = os.getenv("DATABASE_URL")
     IS_CLOUD = bool(
         os.getenv("RENDER")
+        or os.getenv("RENDER_SERVICE_ID")
+        or os.getenv("RENDER_INSTANCE_ID")
         or os.getenv("VERCEL")
         or os.getenv("DYNO")
         or os.getenv("RAILWAY_STATIC_URL")
         or os.getenv("FLY_APP_NAME")
     )
+
+    db_host = os.getenv("DB_HOST", "localhost").strip()
+    is_localhost = db_host.lower() in ("localhost", "127.0.0.1", "0.0.0.0", "::1", "")
+
+    # On cloud platforms (Render, Railway, etc.), if no remote DATABASE_URL is set and DB_HOST is localhost,
+    # we MUST use SQLite because localhost has no MySQL server running inside the cloud container.
     USE_SQLITE = (
         os.getenv("USE_SQLITE", "false").lower() in ("true", "1")
-        or (IS_CLOUD and not DATABASE_URL and not os.getenv("DB_HOST"))
+        or (IS_CLOUD and not DATABASE_URL and is_localhost)
     )
 
     if USE_SQLITE:
         SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(BASE_DIR, 'documind.db')}"
-        SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "pool_pre_ping": True,
+            "connect_args": {"timeout": 15},
+        }
     elif DATABASE_URL:
         if DATABASE_URL.startswith("mysql://"):
             SQLALCHEMY_DATABASE_URI = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
@@ -44,9 +55,19 @@ class Config:
             SQLALCHEMY_DATABASE_URI = DATABASE_URL.replace("postgres://", "postgresql://", 1)
         else:
             SQLALCHEMY_DATABASE_URI = DATABASE_URL
-        SQLALCHEMY_ENGINE_OPTIONS = {"pool_recycle": 1800, "pool_pre_ping": True}
+
+        connect_args = {}
+        if "mysql" in SQLALCHEMY_DATABASE_URI:
+            connect_args = {"connect_timeout": 5}
+        elif "postgres" in SQLALCHEMY_DATABASE_URI:
+            connect_args = {"connect_timeout": 5}
+
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "pool_recycle": 1800,
+            "pool_pre_ping": True,
+            "connect_args": connect_args,
+        }
     else:
-        DB_HOST = os.getenv("DB_HOST", "localhost")
         DB_PORT = os.getenv("DB_PORT", "3306")
         DB_USER = os.getenv("DB_USER", "root")
         DB_PASSWORD = os.getenv("DB_PASSWORD", "")
@@ -55,11 +76,12 @@ class Config:
         # quote_plus makes passwords with @ # : etc. safe
         SQLALCHEMY_DATABASE_URI = (
             f"mysql+pymysql://{DB_USER}:{quote_plus(DB_PASSWORD)}"
-            f"@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
+            f"@{db_host}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
         )
         SQLALCHEMY_ENGINE_OPTIONS = {
             "pool_recycle": 1800,
             "pool_pre_ping": True,
+            "connect_args": {"connect_timeout": 5},
         }
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False

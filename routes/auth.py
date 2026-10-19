@@ -36,7 +36,14 @@ def login_required(view):
 @auth_bp.before_app_request
 def load_logged_in_user():
     user_id = session.get("user_id")
-    g.user = db.session.get(User, user_id) if user_id else None
+    if user_id:
+        try:
+            g.user = db.session.get(User, user_id)
+        except Exception:
+            db.session.rollback()
+            g.user = None
+    else:
+        g.user = None
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
@@ -47,19 +54,23 @@ def register():
         password = request.form.get("password", "")
         confirm_password = request.form.get("confirm_password")
 
-        if not name or not email or len(password) < 6:
-            flash("Fill all fields. Password must be at least 6 characters.", "danger")
-        elif confirm_password is not None and password != confirm_password:
-            flash("Passwords do not match. Please re-enter your password.", "danger")
-        elif User.query.filter_by(email=email).first():
-            flash("This email is already registered.", "danger")
-        else:
-            user = User(name=name, email=email)
-            user.set_password(password)
-            db.session.add(user)
-            db.session.commit()
-            flash("Account created! Please log in.", "success")
-            return redirect(url_for("auth.login"))
+        try:
+            if not name or not email or len(password) < 6:
+                flash("Fill all fields. Password must be at least 6 characters.", "danger")
+            elif confirm_password is not None and password != confirm_password:
+                flash("Passwords do not match. Please re-enter your password.", "danger")
+            elif User.query.filter_by(email=email).first():
+                flash("This email is already registered.", "danger")
+            else:
+                user = User(name=name, email=email)
+                user.set_password(password)
+                db.session.add(user)
+                db.session.commit()
+                flash("Account created! Please log in.", "success")
+                return redirect(url_for("auth.login"))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Registration error: {e}", "danger")
     return render_template("register.html")
 
 
