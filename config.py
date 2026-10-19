@@ -22,7 +22,17 @@ class Config:
 
     # Database configuration (Cloud DATABASE_URL, SQLite fallback, or MySQL)
     DATABASE_URL = os.getenv("DATABASE_URL")
-    USE_SQLITE = os.getenv("USE_SQLITE", "false").lower() in ("true", "1")
+    IS_CLOUD = bool(
+        os.getenv("RENDER")
+        or os.getenv("VERCEL")
+        or os.getenv("DYNO")
+        or os.getenv("RAILWAY_STATIC_URL")
+        or os.getenv("FLY_APP_NAME")
+    )
+    USE_SQLITE = (
+        os.getenv("USE_SQLITE", "false").lower() in ("true", "1")
+        or (IS_CLOUD and not DATABASE_URL and not os.getenv("DB_HOST"))
+    )
 
     if USE_SQLITE:
         SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(BASE_DIR, 'documind.db')}"

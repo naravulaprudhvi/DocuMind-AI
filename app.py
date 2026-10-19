@@ -50,7 +50,19 @@ def create_app():
         return response
 
     with app.app_context():
-        db.create_all()  # creates the 8 tables if they do not exist
+        try:
+            db.create_all()  # creates the 8 tables if they do not exist
+        except Exception as e:
+            import logging
+            logging.error(f"Database initialization warning: {e}")
+            if getattr(Config, "IS_CLOUD", False):
+                try:
+                    import os
+                    logging.info("Falling back to SQLite database for cloud resilience...")
+                    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(Config.BASE_DIR, 'documind.db')}"
+                    db.create_all()
+                except Exception as fallback_err:
+                    logging.error(f"Fallback database error: {fallback_err}")
         from services.embedding_service import warmup_embedding_model_async
         warmup_embedding_model_async()
     return app
