@@ -58,6 +58,14 @@ Or using Docker Compose:
 docker-compose up -d --build
 ```
 
+### Option C: Vercel Deployment
+DocuMind AI includes `vercel.json` and `.python-version` (pinned to `3.12` as required by Vercel's build runner).
+
+> **Important Architecture Note for Vercel:**
+> Vercel is a **serverless** platform with a **250 MB uncompressed function size limit** and **ephemeral read-only disk storage** (meaning any files uploaded to `uploads/` or FAISS indexes saved to `vector_indexes/` are wiped between function invocations).
+> 
+> For full production document processing with local files and heavy ML dependencies (`torch`, `faiss-cpu`), **Render**, **Railway**, **Koyeb**, or **Docker** (Option A & B) are strongly recommended over Vercel because they provide long-running processes, persistent storage, and full resource allocations.
+
 ---
 
 ## 3. Directory Structure
