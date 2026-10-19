@@ -34,6 +34,8 @@ def warmup_embedding_model_async():
     """Asynchronously pre-loads the SentenceTransformer model in a background thread."""
     def _warmup():
         try:
+            import time
+            time.sleep(8)  # Allow web server to boot and respond to initial health checks and page requests
             get_embedding_model()
         except Exception:
             pass
