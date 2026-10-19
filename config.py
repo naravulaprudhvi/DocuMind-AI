@@ -17,12 +17,29 @@ load_dotenv()  # reads the .env file
 
 
 def sanitize_database_url(url: str) -> str:
-    """Auto-sanitizes database URLs, encoding special characters in passwords and adding SSL for Supabase/Neon."""
+    """Auto-sanitizes database URLs, encoding special characters in passwords and adding SSL for Supabase/Neon.
+    Also handles Render's IPv4 limitation by mapping direct Supabase IPv6 endpoints to IPv4 Supavisor Poolers.
+    """
     if not url:
         return url
     url = url.strip().strip("'\"").strip()
     import re
     from urllib.parse import quote
+
+    # Supabase direct connection host `db.<ref>.supabase.co:5432` resolves ONLY to IPv6 (2406:da1c...).
+    # Cloud platforms like Render do NOT support outbound IPv6, throwing "Network is unreachable".
+    # We automatically translate direct Supabase endpoints to IPv4-supported Supavisor Pooler endpoints!
+    m_direct = re.match(r"^(?P<scheme>[a-zA-Z0-9\+\-]+://)(?P<user>[^:]+):(?P<password>.+)@db\.(?P<ref>[a-zA-Z0-9]+)\.supabase\.co(?::\d+)?/(?P<rest>.*)$", url)
+    if m_direct:
+        scheme = m_direct.group("scheme")
+        ref = m_direct.group("ref")
+        password = m_direct.group("password")
+        rest = m_direct.group("rest")
+        pooler_user = f"postgres.{ref}"
+        region = "ap-southeast-2" if ref == "qlcyrgcqxjaxczwefity" else "us-east-1"
+        pooler_host = f"aws-0-{region}.pooler.supabase.com:6543"
+        url = f"{scheme}{pooler_user}:{password}@{pooler_host}/{rest}"
+
     # Matches: postgresql://username:password@hostname:port/dbname
     m = re.match(r"^(?P<scheme>[a-zA-Z0-9\+\-]+://)(?P<user>[^:]+):(?P<password>.+)@(?P<host>[^@/]+)/(?P<rest>.*)$", url)
     if m:
