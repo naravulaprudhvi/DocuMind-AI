@@ -723,8 +723,6 @@
       attachedDocs.push({ id: docId, name: docName });
       saveAttachedDocs(attachedDocs);
     }
-    const welcome = document.getElementById('in-chat-welcome-box');
-    if (welcome) welcome.style.display = 'none';
     const input = document.getElementById('chat-input');
     if (input) {
       input.focus();
@@ -1021,6 +1019,25 @@
     }
   });
 
+  // Resilient Bubble Appender: ensures bubbles are inserted into .workspace-stage-inner before loading-indicator
+  function appendChatBubble(node) {
+    if (!node) return;
+    const indicator = document.getElementById('loading-indicator');
+    if (indicator && indicator.parentNode) {
+      indicator.parentNode.insertBefore(node, indicator);
+    } else {
+      const msgs = document.getElementById('chat-messages');
+      const stageInner = (msgs && msgs.querySelector('.workspace-stage-inner')) || msgs;
+      if (stageInner) {
+        stageInner.appendChild(node);
+      }
+    }
+    const msgs = document.getElementById('chat-messages');
+    if (msgs) {
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+  }
+
   // Handle chat submission asynchronously
   const chatForm = document.getElementById('chat-form');
   if (chatForm) {
@@ -1067,11 +1084,7 @@
             <i class="bi bi-calendar3 me-1"></i> Today
           </span>
         `;
-        if (indicator) {
-          msgs.insertBefore(dateDivider, indicator);
-        } else {
-          msgs.appendChild(dateDivider);
-        }
+        appendChatBubble(dateDivider);
       }
 
       const userBubble = document.createElement('div');
@@ -1088,12 +1101,12 @@
           <i class="bi bi-person-fill"></i>
         </div>
       `;
-      if (msgs && indicator) {
-        msgs.insertBefore(userBubble, indicator);
+      appendChatBubble(userBubble);
+      if (indicator) {
         indicator.classList.remove('d-none');
         indicator.classList.add('d-flex');
-        msgs.scrollTop = msgs.scrollHeight;
       }
+      if (msgs) msgs.scrollTop = msgs.scrollHeight;
 
       // 4. Activate ChatGPT-Style Stop Button & AbortController
       setGeneratingState(true);
@@ -1189,9 +1202,7 @@
             </div>
           `;
 
-          if (msgs && indicator) {
-            msgs.insertBefore(assistantBubble, indicator);
-          }
+          appendChatBubble(assistantBubble);
           enhanceCodeBlocks(assistantBubble);
 
           // If this was a fresh unsaved chat, save it to history UI and update active conversation ID
@@ -1267,9 +1278,7 @@
               </span>
             </div>
           `;
-          if (msgs && indicator) {
-            msgs.insertBefore(stoppedBubble, indicator);
-          }
+          appendChatBubble(stoppedBubble);
         } else {
           console.error('Chat error:', err);
           const errorBubble = document.createElement('div');
@@ -1282,9 +1291,7 @@
               Failed to send message: ${escapeHtml(err.message || 'Network error')}. Please try again.
             </div>
           `;
-          if (msgs && indicator) {
-            msgs.insertBefore(errorBubble, indicator);
-          }
+          appendChatBubble(errorBubble);
         }
       } finally {
         setGeneratingState(false);
@@ -1293,7 +1300,6 @@
           indicator.classList.add('d-none');
           indicator.classList.remove('d-flex');
         }
-        if (msgs) msgs.scrollTop = msgs.scrollHeight;
         const chatInput = document.getElementById('chat-input');
         if (chatInput) chatInput.focus();
       }
