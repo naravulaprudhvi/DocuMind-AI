@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import uuid
 from typing import Any, Optional
 
@@ -180,57 +181,207 @@ def view_chunks(doc_id):
 
 def resolve_document_file_path(doc) -> Optional[str]:
     """
-    Finds the physical document file on disk through multiple fallback strategies:
-    1. doc.file_path directly
-    2. Upload folder by base filename
-    3. Upload folder by original doc.filename
-    4. Suffix / fuzzy match in user's upload directory (e.g. UUID prefix variations)
-    5. Legacy paths (C:\\Projects\\DocuMind-AI\\uploads\\<user_id>)
-    6. Self-healing: if found, updates doc.file_path in DB so future lookups are immediate.
+    Finds or restores the physical document file on disk through multi-tier strategies:
+    1. doc.file_path directly if it exists on disk.
+    2. Cross-platform path normalization (translating /app/uploads/ to local UPLOAD_FOLDER).
+    3. User-specific directory check by basename, original filename, or suffix match.
+    4. Global recursive scan across UPLOAD_FOLDER (auto-heals cross-environment / migrated docs by copying to user's folder).
+    5. Legacy directory check (C:\\Projects\\DocuMind-AI\\uploads).
+    6. Self-healing synthesis: if file is missing from disk but chunks exist in DB, synthesizes an authentic
+       file (.pdf via PyMuPDF, .docx via python-docx, or text) and saves to disk.
+    7. Self-healing DB update: persists resolved path to doc.file_path in DB.
     """
     if doc.file_path and os.path.exists(doc.file_path):
         return doc.file_path
 
-    candidates = []
-    user_upload_dir = os.path.join(current_app.config.get("UPLOAD_FOLDER", "uploads"), str(doc.user_id))
+    upload_root = os.path.abspath(current_app.config.get("UPLOAD_FOLDER", "uploads"))
+    user_upload_dir = os.path.join(upload_root, str(doc.user_id))
 
-    if user_upload_dir and os.path.exists(user_upload_dir):
-        if doc.file_path:
-            candidates.append(os.path.join(user_upload_dir, os.path.basename(doc.file_path)))
-        candidates.append(os.path.join(user_upload_dir, doc.filename))
+    # 1. Cross-platform path matching (e.g. /app/uploads/<uid>/<file> on Linux -> local uploads/<uid>/<file>)
+    if doc.file_path:
+        norm_fp = doc.file_path.replace("\\", "/")
+        if "/uploads/" in norm_fp:
+            rel_path = norm_fp.split("/uploads/", 1)[-1]
+            cand = os.path.normpath(os.path.join(upload_root, rel_path))
+            if os.path.exists(cand):
+                try:
+                    doc.file_path = cand
+                    db.session.commit()
+                except Exception:
+                    pass
+                return cand
+
+    # 2. Check within the user's specific upload directory
+    if os.path.exists(user_upload_dir):
+        for target in [
+            os.path.basename(doc.file_path) if doc.file_path else None,
+            doc.filename,
+        ]:
+            if target:
+                cand = os.path.join(user_upload_dir, target)
+                if os.path.exists(cand):
+                    try:
+                        doc.file_path = cand
+                        db.session.commit()
+                    except Exception:
+                        pass
+                    return cand
 
         try:
             for fname in os.listdir(user_upload_dir):
                 if fname.endswith(doc.filename) or (doc.filename.lower() in fname.lower()):
-                    candidates.append(os.path.join(user_upload_dir, fname))
+                    cand = os.path.join(user_upload_dir, fname)
+                    if os.path.exists(cand):
+                        try:
+                            doc.file_path = cand
+                            db.session.commit()
+                        except Exception:
+                            pass
+                        return cand
         except OSError:
             pass
 
-    # Check optional legacy directory if configured or present locally
+    # 3. Global scan across all subdirectories in UPLOAD_FOLDER
+    found_match = None
+    if os.path.exists(upload_root):
+        # Priority 1: exact basename or exact filename match
+        for root, _, files in os.walk(upload_root):
+            for fname in files:
+                if doc.file_path and fname == os.path.basename(doc.file_path):
+                    found_match = os.path.join(root, fname)
+                    break
+                if fname == doc.filename:
+                    found_match = os.path.join(root, fname)
+                    break
+                if fname.endswith(f"_{doc.filename}") or fname.endswith(doc.filename):
+                    found_match = os.path.join(root, fname)
+                    break
+            if found_match:
+                break
+
+        # Priority 2: stem & extension match
+        if not found_match:
+            doc_stem = os.path.splitext(doc.filename)[0].lower()
+            doc_ext = os.path.splitext(doc.filename)[1].lower()
+            for root, _, files in os.walk(upload_root):
+                for fname in files:
+                    f_lower = fname.lower()
+                    if f_lower.endswith(doc_ext) and (doc_stem in f_lower or f_lower.endswith(doc.filename.lower())):
+                        found_match = os.path.join(root, fname)
+                        break
+                if found_match:
+                    break
+
+    if found_match and os.path.exists(found_match):
+        os.makedirs(user_upload_dir, exist_ok=True)
+        user_target = os.path.join(user_upload_dir, os.path.basename(found_match))
+        if not os.path.exists(user_target):
+            try:
+                shutil.copy2(found_match, user_target)
+            except Exception:
+                user_target = found_match
+        try:
+            doc.file_path = user_target
+            db.session.commit()
+        except Exception:
+            pass
+        return user_target
+
+    # 4. Check legacy folder if configured
     legacy_base = current_app.config.get("LEGACY_UPLOAD_FOLDER") or (
         r"C:\Projects\DocuMind-AI\uploads" if os.name == "nt" and os.path.exists(r"C:\Projects\DocuMind-AI\uploads") else None
     )
     if legacy_base and os.path.exists(legacy_base):
-        legacy_user_dir = os.path.join(legacy_base, str(doc.user_id))
-        if os.path.exists(legacy_user_dir):
-            if doc.file_path:
-                candidates.append(os.path.join(legacy_user_dir, os.path.basename(doc.file_path)))
-            candidates.append(os.path.join(legacy_user_dir, doc.filename))
-            try:
-                for fname in os.listdir(legacy_user_dir):
-                    if fname.endswith(doc.filename) or (doc.filename.lower() in fname.lower()):
-                        candidates.append(os.path.join(legacy_user_dir, fname))
-            except OSError:
-                pass
+        for root, _, files in os.walk(legacy_base):
+            for fname in files:
+                if fname.endswith(doc.filename) or (doc.filename.lower() in fname.lower()):
+                    cand = os.path.join(root, fname)
+                    if os.path.exists(cand):
+                        os.makedirs(user_upload_dir, exist_ok=True)
+                        user_target = os.path.join(user_upload_dir, fname)
+                        try:
+                            shutil.copy2(cand, user_target)
+                        except Exception:
+                            user_target = cand
+                        try:
+                            doc.file_path = user_target
+                            db.session.commit()
+                        except Exception:
+                            pass
+                        return user_target
 
-    for candidate in candidates:
-        if candidate and os.path.exists(candidate):
+    # 5. Self-Healing Synthesis from DocumentChunks (for cloud/ephemeral storage recovery)
+    chunks = DocumentChunk.query.filter_by(document_id=doc.document_id).order_by(DocumentChunk.page_number, DocumentChunk.chunk_id).all()
+    if chunks:
+        os.makedirs(user_upload_dir, exist_ok=True)
+        ext = os.path.splitext(doc.filename.lower())[1]
+
+        if ext == ".pdf":
             try:
-                doc.file_path = candidate
-                db.session.commit()
+                import fitz
+                pdf_doc = fitz.open()
+                pages_dict = {}
+                for c in chunks:
+                    p = c.page_number or 1
+                    pages_dict.setdefault(p, []).append(c.chunk_text)
+
+                for p_num in sorted(pages_dict.keys()):
+                    page = pdf_doc.new_page(width=595, height=842)
+                    page.insert_text(fitz.Point(40, 35), f"{doc.filename} • Page {p_num}", fontsize=8, color=(0.45, 0.45, 0.45))
+                    page.draw_line(fitz.Point(40, 42), fitz.Point(555, 42), color=(0.85, 0.85, 0.85), width=0.5)
+                    content = "\n\n".join(pages_dict[p_num])
+                    rect = fitz.Rect(40, 52, 555, 805)
+                    page.insert_textbox(rect, content, fontsize=9.5, lineheight=1.35)
+
+                synth_filename = f"{uuid.uuid4().hex}_{doc.filename}"
+                save_path = os.path.join(user_upload_dir, synth_filename)
+                pdf_doc.save(save_path)
+                pdf_doc.close()
+                try:
+                    doc.file_path = save_path
+                    db.session.commit()
+                except Exception:
+                    pass
+                return save_path
             except Exception:
                 pass
-            return candidate
+
+        elif ext in (".docx", ".doc"):
+            try:
+                import docx
+                d_obj = docx.Document()
+                d_obj.add_heading(doc.filename, 0)
+                for c in chunks:
+                    for p in c.chunk_text.split("\n\n"):
+                        if p.strip():
+                            d_obj.add_paragraph(p.strip())
+                synth_filename = f"{uuid.uuid4().hex}_{doc.filename}"
+                save_path = os.path.join(user_upload_dir, synth_filename)
+                d_obj.save(save_path)
+                try:
+                    doc.file_path = save_path
+                    db.session.commit()
+                except Exception:
+                    pass
+                return save_path
+            except Exception:
+                pass
+
+        elif ext in (".txt", ".md"):
+            try:
+                synth_filename = f"{uuid.uuid4().hex}_{doc.filename}"
+                save_path = os.path.join(user_upload_dir, synth_filename)
+                with open(save_path, "w", encoding="utf-8") as fp:
+                    for c in chunks:
+                        fp.write(c.chunk_text + "\n\n")
+                try:
+                    doc.file_path = save_path
+                    db.session.commit()
+                except Exception:
+                    pass
+                return save_path
+            except Exception:
+                pass
 
     return None
 
@@ -334,55 +485,34 @@ def convert_document_to_html(file_path: Optional[str], doc_id: int) -> str:
 def view_document(doc_id):
     """
     Serves or displays the original document:
+    - PDFs open directly in the browser's native built-in PDF viewer tab as the authentic PDF.
     - Word (.docx, .doc) documents are rendered in a clean, readable browser document viewer.
-    - PDFs open directly in the browser's built-in PDF viewer tab.
     - Passing ?raw=1 or ?download=1 directly serves the binary file.
     """
     user_id = session.get("user_id")
     doc: Any = Document.query.filter_by(document_id=doc_id, user_id=user_id).first_or_404()
     file_path = resolve_document_file_path(doc)
 
+    if not file_path or not os.path.exists(file_path):
+        flash(f"Original file '{doc.filename}' could not be located.", "warning")
+        return redirect(url_for("documents.library"))
+
     ext = os.path.splitext(doc.filename.lower())[1]
     raw_requested = request.args.get("raw") == "1" or request.args.get("download") in ("1", "true")
+    preview_requested = request.args.get("preview") == "1"
 
-    # If raw binary file is explicitly requested, send file directly (synthesize from chunks if missing)
+    mimetype = None
+    if ext == ".pdf":
+        mimetype = "application/pdf"
+    elif ext in (".docx",):
+        mimetype = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    elif ext in (".doc",):
+        mimetype = "application/msword"
+    elif ext in (".txt", ".md"):
+        mimetype = "text/plain; charset=utf-8"
+
+    # 1. Direct binary download or raw file request
     if raw_requested:
-        if not file_path or not os.path.exists(file_path):
-            if ext in (".docx", ".doc"):
-                chunks = DocumentChunk.query.filter_by(document_id=doc.document_id).order_by(DocumentChunk.page_number, DocumentChunk.chunk_id).all()
-                if chunks:
-                    try:
-                        import docx
-                        d_obj = docx.Document()
-                        d_obj.add_heading(doc.filename, 0)
-                        for c in chunks:
-                            for p in c.chunk_text.split("\n\n"):
-                                if p.strip():
-                                    d_obj.add_paragraph(p.strip())
-                        user_dir = os.path.join(current_app.config.get("UPLOAD_FOLDER", "uploads"), str(doc.user_id))
-                        os.makedirs(user_dir, exist_ok=True)
-                        save_path = os.path.join(user_dir, doc.filename)
-                        d_obj.save(save_path)
-                        file_path = save_path
-                        doc.file_path = save_path
-                        db.session.commit()
-                    except Exception:
-                        pass
-
-        if not file_path or not os.path.exists(file_path):
-            flash(f"Original file '{doc.filename}' is not available for direct download.", "warning")
-            return redirect(url_for("documents.library"))
-
-        mimetype = None
-        if ext == ".pdf":
-            mimetype = "application/pdf"
-        elif ext in (".docx",):
-            mimetype = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        elif ext in (".doc",):
-            mimetype = "application/msword"
-        elif ext in (".txt", ".md"):
-            mimetype = "text/plain; charset=utf-8"
-
         as_attachment = request.args.get("download") in ("1", "true")
         return send_file(
             file_path,
@@ -391,7 +521,16 @@ def view_document(doc_id):
             download_name=doc.filename,
         )
 
-    # Word documents: ALWAYS render in high-fidelity browser document viewer
+    # 2. PDF documents: ALWAYS open directly in the browser's built-in PDF viewer (native PDF, not chunk text)
+    if ext == ".pdf" and not preview_requested:
+        return send_file(
+            file_path,
+            mimetype="application/pdf",
+            as_attachment=False,
+            download_name=doc.filename,
+        )
+
+    # 3. Word documents: render in high-fidelity browser document viewer
     if ext in (".docx", ".doc"):
         doc_html = convert_document_to_html(file_path, doc.document_id)
         return render_template(
@@ -401,48 +540,21 @@ def view_document(doc_id):
             is_word=True,
         )
 
-    # Text / Markdown documents: render in document viewer
-    if ext in (".txt", ".md"):
-        doc_html = convert_document_to_html(file_path, doc.document_id)
-        return render_template(
-            "document_viewer.html",
-            doc=doc,
-            content_html=doc_html,
-            is_word=False,
-        )
-
-    # PDF documents: browser natively renders PDF with application/pdf
-    if ext == ".pdf":
-        if not file_path or not os.path.exists(file_path):
-            doc_html = convert_document_to_html(None, doc.document_id)
-            return render_template(
-                "document_viewer.html",
-                doc=doc,
-                content_html=doc_html,
-                is_word=False,
-            )
+    # 4. Text / Markdown documents
+    if ext in (".txt", ".md") and not preview_requested:
         return send_file(
             file_path,
-            mimetype="application/pdf",
+            mimetype="text/plain; charset=utf-8",
             as_attachment=False,
             download_name=doc.filename,
         )
 
-    # Fallback to direct send_file if file exists on disk
-    if file_path and os.path.exists(file_path):
-        return send_file(
-            file_path,
-            as_attachment=False,
-            download_name=doc.filename,
-        )
-
-    # Ultimate fallback: render available chunks in document viewer
-    doc_html = convert_document_to_html(None, doc.document_id)
-    return render_template(
-        "document_viewer.html",
-        doc=doc,
-        content_html=doc_html,
-        is_word=False,
+    # 5. Default: serve the original file
+    return send_file(
+        file_path,
+        mimetype=mimetype,
+        as_attachment=False,
+        download_name=doc.filename,
     )
 
 

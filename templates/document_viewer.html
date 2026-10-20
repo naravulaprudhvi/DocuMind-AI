@@ -23,8 +23,10 @@
     </h5>
     <small class="text-muted">
       Document ID: #{{ doc.document_id }} &bull;
-      {% if is_word %}
+      {% if doc.filename.lower().endswith(('.docx', '.doc')) %}
         <span class="badge badge-soft-info rounded-pill px-2.5 py-0.5">Word (.docx)</span>
+      {% elif doc.filename.lower().endswith('.pdf') %}
+        <span class="badge badge-soft-danger rounded-pill px-2.5 py-0.5">PDF Document</span>
       {% else %}
         <span class="badge badge-soft-primary rounded-pill px-2.5 py-0.5">Text Document</span>
       {% endif %}
@@ -33,10 +35,13 @@
   </div>
 
   <div class="d-flex align-items-center gap-2">
+    <a href="{{ url_for('documents.view_document', doc_id=doc.document_id, raw=1) }}" target="_blank" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1 px-3 py-2 rounded-3" title="Open original document in new tab">
+      <i class="bi bi-box-arrow-up-right"></i> Open Original
+    </a>
     <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 px-3 py-2 rounded-3" onclick="window.print()" title="Print document">
       <i class="bi bi-printer"></i> Print
     </button>
-    <a href="{{ url_for('documents.view_document', doc_id=doc.document_id, raw=1, download=1) }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1 px-3 py-2 rounded-3" title="Download original binary file">
+    <a href="{{ url_for('documents.view_document', doc_id=doc.document_id, raw=1, download=1) }}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 px-3 py-2 rounded-3" title="Download original binary file">
       <i class="bi bi-download"></i> Download
     </a>
     <a href="{{ url_for('summaries.view_summary', doc_id=doc.document_id) }}" class="btn btn-outline-info btn-sm d-inline-flex align-items-center gap-1 px-3 py-2 rounded-3" title="View Executive Summary">
@@ -48,6 +53,17 @@
   </div>
 </div>
 
+{% if doc.filename.lower().endswith('.pdf') %}
+<!-- Embedded Native PDF Viewer Frame -->
+<div class="document-viewer-container py-3">
+  <div class="card card-elevated mx-auto overflow-hidden shadow-lg" style="max-width: 1050px; height: 85vh; border-radius: 16px; border: 1px solid var(--card-border);">
+    <iframe src="{{ url_for('documents.view_document', doc_id=doc.document_id, raw=1) }}" 
+            class="w-100 h-100 border-0" 
+            title="{{ doc.filename }}">
+    </iframe>
+  </div>
+</div>
+{% else %}
 <!-- Reading Canvas / Paper View -->
 <div class="document-viewer-container py-3">
   <div class="card card-elevated document-paper mx-auto p-4 p-md-5">
@@ -56,6 +72,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 <style>
   .document-paper {
